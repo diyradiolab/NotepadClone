@@ -102,6 +102,7 @@ contextBridge.exposeInMainWorld('api', {
   gitStatus: (dirPath) => ipcRenderer.invoke('renderer:git-status', dirPath),
   gitInit: (dirPath) => ipcRenderer.invoke('renderer:git-init', dirPath),
   gitStageAll: (dirPath) => ipcRenderer.invoke('renderer:git-stage-all', dirPath),
+  gitStageFile: (dirPath, filePath) => ipcRenderer.invoke('renderer:git-stage-file', { dirPath, filePath }),
   gitCommit: (dirPath, message) => ipcRenderer.invoke('renderer:git-commit', { dirPath, message }),
   gitPush: (dirPath) => ipcRenderer.invoke('renderer:git-push', dirPath),
   gitPull: (dirPath) => ipcRenderer.invoke('renderer:git-pull', dirPath),

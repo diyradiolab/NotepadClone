@@ -80,6 +80,16 @@ async function stageAll(cwd) {
 
 async function commit(cwd, message) {
   try {
+    // Only auto-stage if nothing is currently staged
+    let hasStaged = false;
+    try {
+      await runGit(['diff', '--cached', '--quiet'], cwd);
+    } catch {
+      hasStaged = true; // exit code 1 means there are staged changes
+    }
+    if (!hasStaged) {
+      await runGit(['add', '-A'], cwd);
+    }
     const stdout = await runGit(['commit', '-m', message], cwd);
     const summary = stdout.split('\n')[0];
     return { success: true, summary };
@@ -106,4 +116,13 @@ async function pull(cwd) {
   }
 }
 
-module.exports = { getStatus, init, stageAll, commit, push, pull };
+async function stageFile(cwd, filePath) {
+  try {
+    await runGit(['add', '--', filePath], cwd);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { getStatus, init, stageAll, stageFile, commit, push, pull };

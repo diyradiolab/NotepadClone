@@ -91,28 +91,33 @@ let gitState = { isRepo: false, branch: '', dirtyCount: 0, hasRemote: false, rep
 const gitIndicator = document.getElementById('git-status-indicator');
 const gitInitBtn = document.getElementById('git-init-btn');
 const gitStageBtn = document.getElementById('git-stage-btn');
+const gitStageFileBtn = document.getElementById('git-stage-file-btn');
 const gitCommitBtn = document.getElementById('git-commit-btn');
 const gitPushBtn = document.getElementById('git-push-btn');
 const gitPullBtn = document.getElementById('git-pull-btn');
 
 function getActiveFileDirPath() {
   const tabId = tabManager.getActiveTabId();
-  if (!tabId) return null;
-  const tab = tabManager.getTab(tabId);
-  if (!tab || !tab.filePath) return null;
-  const parts = tab.filePath.split(/[/\\]/);
-  parts.pop();
-  return parts.join('/') || null;
+  if (tabId) {
+    const tab = tabManager.getTab(tabId);
+    if (tab && tab.filePath) {
+      const parts = tab.filePath.split(/[/\\]/);
+      parts.pop();
+      const dir = parts.join('/');
+      if (dir) return dir;
+    }
+  }
+  return currentFolderPath || null;
 }
 
 async function refreshGitStatus() {
-  const dirPath = getActiveFileDirPath() || currentFolderPath;
+  const dirPath = getActiveFileDirPath();
   gitState = await window.api.gitStatus(dirPath);
   updateGitUI();
 }
 
 function updateGitUI() {
-  const hasDirPath = !!(getActiveFileDirPath() || currentFolderPath);
+  const hasDirPath = !!getActiveFileDirPath();
 
   // Indicator color + tooltip
   gitIndicator.classList.toggle('git-active', gitState.isRepo);
@@ -132,12 +137,17 @@ function updateGitUI() {
   // Show/hide buttons
   gitInitBtn.style.display = (!gitState.isRepo && hasDirPath) ? '' : 'none';
   gitStageBtn.style.display = gitState.isRepo ? '' : 'none';
+  gitStageFileBtn.style.display = gitState.isRepo ? '' : 'none';
   gitCommitBtn.style.display = gitState.isRepo ? '' : 'none';
   gitPushBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
   gitPullBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
 
   // Disable stage when nothing dirty
   gitStageBtn.disabled = gitState.dirtyCount === 0;
+
+  // Disable stage-file when active tab has no file
+  const activeTab = tabManager.getTab(tabManager.getActiveTabId());
+  gitStageFileBtn.disabled = !activeTab || !activeTab.filePath;
 
   // Status bar
   if (gitState.isRepo) {
@@ -165,6 +175,26 @@ async function gitStageAll() {
   const result = await window.api.gitStageAll(dirPath);
   if (result.success) {
     statusBar.showMessage('All changes staged');
+  } else {
+    statusBar.showMessage(`Stage failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+}
+
+async function gitStageFile() {
+  const tabId = tabManager.getActiveTabId();
+  if (!tabId) return;
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.filePath) {
+    statusBar.showMessage('No file to stage (unsaved tab)');
+    return;
+  }
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  const result = await window.api.gitStageFile(dirPath, tab.filePath);
+  if (result.success) {
+    const filename = tab.filePath.split(/[/\\]/).pop();
+    statusBar.showMessage(`Staged: ${filename}`);
   } else {
     statusBar.showMessage(`Stage failed: ${result.error}`);
   }
@@ -671,6 +701,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'sql-query': sqlQueryPanel.toggle(); break;
     case 'git-init': gitInit(); break;
     case 'git-stage': gitStageAll(); break;
+    case 'git-stage-file': gitStageFile(); break;
     case 'git-commit': gitCommitOpen(); break;
     case 'git-push': gitPush(); break;
     case 'git-pull': gitPull(); break;

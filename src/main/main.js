@@ -551,6 +551,10 @@ ipcMain.handle('renderer:git-stage-all', async (_event, dirPath) => {
   return gitService.stageAll(dirPath);
 });
 
+ipcMain.handle('renderer:git-stage-file', async (_event, { dirPath, filePath }) => {
+  return gitService.stageFile(dirPath, filePath);
+});
+
 ipcMain.handle('renderer:git-commit', async (_event, { dirPath, message }) => {
   return gitService.commit(dirPath, message);
 });
