@@ -15,11 +15,13 @@ export class SqlQueryPanel {
     this.lastColumns = null;
     this.lastSourceName = null;
     this.lastQuery = null;
+    this.builderColumns = [];
     this._render();
   }
 
   _render() {
     this.container.innerHTML = `
+      <div class="sqp-resize-handle" id="sqp-resize-handle"></div>
       <div class="sqp-header">
         <span>SQL QUERY</span>
         <button class="sqp-close-btn" title="Close">\u00D7</button>
@@ -38,6 +40,27 @@ export class SqlQueryPanel {
         </label>
         <input type="text" class="sqp-custom-regex" id="sqp-custom-regex" placeholder="e.g. ::" style="display:none" />
         <label><input type="checkbox" id="sqp-header"> First line as header</label>
+      </div>
+      <div class="sqp-builder" id="sqp-builder">
+        <div class="sqp-builder-header">
+          <button class="sqp-builder-toggle" id="sqp-builder-toggle" title="Collapse/expand builder">&#9660;</button>
+          <span>QUERY BUILDER</span>
+          <button id="sqp-refresh-cols">Refresh</button>
+          <button id="sqp-clear-builder">Clear</button>
+        </div>
+        <table class="sqp-builder-table">
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Alias</th>
+              <th>Sort</th>
+              <th>Filter</th>
+              <th>Output</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sqp-builder-body"></tbody>
+        </table>
       </div>
       <div class="sqp-query-bar">
         <textarea class="sqp-textarea" id="sqp-query" rows="1"
@@ -69,6 +92,243 @@ export class SqlQueryPanel {
       }
       if (e.key === 'Escape') this.hide();
     });
+
+    this.container.querySelector('#sqp-refresh-cols').addEventListener('click', () => this._refreshColumns());
+    this.container.querySelector('#sqp-clear-builder').addEventListener('click', () => this._clearBuilder());
+
+    // Builder collapse toggle
+    this.container.querySelector('#sqp-builder-toggle').addEventListener('click', () => this._toggleBuilder());
+
+    // Resize handle drag
+    this._initResize();
+
+    // Add initial empty row
+    this._addBuilderRow();
+  }
+
+  // ── Resize ──
+
+  _initResize() {
+    const handle = this.container.querySelector('#sqp-resize-handle');
+    let startY, startHeight;
+
+    const onMouseMove = (e) => {
+      const delta = startY - e.clientY;
+      const newHeight = Math.max(150, Math.min(window.innerHeight * 0.8, startHeight + delta));
+      this.container.style.height = newHeight + 'px';
+    };
+
+    const onMouseUp = () => {
+      handle.classList.remove('sqp-dragging');
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      startHeight = this.container.offsetHeight;
+      handle.classList.add('sqp-dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
+
+  // ── Query Builder ──
+
+  _toggleBuilder() {
+    const builder = this.container.querySelector('#sqp-builder');
+    const toggle = this.container.querySelector('#sqp-builder-toggle');
+    builder.classList.toggle('sqp-builder-collapsed');
+    toggle.innerHTML = builder.classList.contains('sqp-builder-collapsed') ? '&#9654;' : '&#9660;';
+  }
+
+  _refreshColumns() {
+    const tabId = this.tabManager.getActiveTabId();
+    if (!tabId) return;
+
+    const tab = this.tabManager.getTab(tabId);
+    if (tab && tab.isLargeFile) return;
+
+    const content = this.editorManager.getContent(tabId);
+    if (!content || content.trim().length === 0) return;
+
+    const { columns } = this._parseContent(content);
+    this.builderColumns = columns;
+
+    // Update all column dropdowns, preserving current selection
+    const selects = this.container.querySelectorAll('.sqp-col-select');
+    for (const select of selects) {
+      const current = select.value;
+      select.innerHTML = '<option value="">—</option>';
+      for (const col of this.builderColumns) {
+        const opt = document.createElement('option');
+        opt.value = col;
+        opt.textContent = col;
+        select.appendChild(opt);
+      }
+      if (this.builderColumns.includes(current)) {
+        select.value = current;
+      }
+    }
+  }
+
+  _addBuilderRow() {
+    const tbody = this.container.querySelector('#sqp-builder-body');
+    const tr = document.createElement('tr');
+
+    // Column select
+    const tdCol = document.createElement('td');
+    const colSelect = document.createElement('select');
+    colSelect.className = 'sqp-col-select';
+    colSelect.innerHTML = '<option value="">—</option>';
+    for (const col of this.builderColumns) {
+      const opt = document.createElement('option');
+      opt.value = col;
+      opt.textContent = col;
+      colSelect.appendChild(opt);
+    }
+    colSelect.addEventListener('change', () => {
+      this._generateSQL();
+      this._autoAppendRow();
+      this._updateRemoveButtons();
+    });
+    tdCol.appendChild(colSelect);
+    tr.appendChild(tdCol);
+
+    // Alias input
+    const tdAlias = document.createElement('td');
+    const aliasInput = document.createElement('input');
+    aliasInput.type = 'text';
+    aliasInput.className = 'sqp-alias-input';
+    aliasInput.placeholder = 'alias';
+    aliasInput.addEventListener('input', () => this._generateSQL());
+    tdAlias.appendChild(aliasInput);
+    tr.appendChild(tdAlias);
+
+    // Sort select
+    const tdSort = document.createElement('td');
+    const sortSelect = document.createElement('select');
+    sortSelect.className = 'sqp-sort-select';
+    sortSelect.innerHTML = '<option value="">—</option><option value="ASC">ASC</option><option value="DESC">DESC</option>';
+    sortSelect.addEventListener('change', () => this._generateSQL());
+    tdSort.appendChild(sortSelect);
+    tr.appendChild(tdSort);
+
+    // Filter input
+    const tdFilter = document.createElement('td');
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.className = 'sqp-filter-input';
+    filterInput.placeholder = "e.g. > 100";
+    filterInput.addEventListener('input', () => this._generateSQL());
+    tdFilter.appendChild(filterInput);
+    tr.appendChild(tdFilter);
+
+    // Output checkbox
+    const tdOutput = document.createElement('td');
+    const outputCheck = document.createElement('input');
+    outputCheck.type = 'checkbox';
+    outputCheck.checked = true;
+    outputCheck.addEventListener('change', () => this._generateSQL());
+    tdOutput.appendChild(outputCheck);
+    tr.appendChild(tdOutput);
+
+    // Remove button
+    const tdRemove = document.createElement('td');
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'sqp-remove-row-btn';
+    removeBtn.textContent = '\u00D7';
+    removeBtn.title = 'Remove row';
+    removeBtn.addEventListener('click', () => {
+      tr.remove();
+      this._updateRemoveButtons();
+      this._generateSQL();
+    });
+    tdRemove.appendChild(removeBtn);
+    tr.appendChild(tdRemove);
+
+    tbody.appendChild(tr);
+    this._updateRemoveButtons();
+  }
+
+  _autoAppendRow() {
+    const tbody = this.container.querySelector('#sqp-builder-body');
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length === 0) return;
+    const lastRow = rows[rows.length - 1];
+    const lastSelect = lastRow.querySelector('.sqp-col-select');
+    if (lastSelect && lastSelect.value) {
+      this._addBuilderRow();
+    }
+  }
+
+  _updateRemoveButtons() {
+    const tbody = this.container.querySelector('#sqp-builder-body');
+    const rows = tbody.querySelectorAll('tr');
+    const btns = tbody.querySelectorAll('.sqp-remove-row-btn');
+    for (const btn of btns) {
+      btn.classList.toggle('sqp-hidden', rows.length <= 1);
+    }
+  }
+
+  _generateSQL() {
+    const tbody = this.container.querySelector('#sqp-builder-body');
+    const rows = tbody.querySelectorAll('tr');
+
+    const selectParts = [];
+    const whereParts = [];
+    const orderParts = [];
+
+    for (const row of rows) {
+      const col = row.querySelector('.sqp-col-select').value;
+      if (!col) continue;
+
+      const alias = row.querySelector('.sqp-alias-input').value.trim();
+      const sort = row.querySelector('.sqp-sort-select').value;
+      const filter = row.querySelector('.sqp-filter-input').value.trim();
+      const output = row.querySelector('input[type="checkbox"]').checked;
+
+      if (output) {
+        selectParts.push(alias ? `${col} AS ${alias}` : col);
+      }
+
+      if (filter) {
+        whereParts.push(`${col} ${filter}`);
+      }
+
+      if (sort) {
+        orderParts.push(`${col} ${sort}`);
+      }
+    }
+
+    const selectClause = selectParts.length > 0 ? selectParts.join(', ') : '*';
+    let sql = `SELECT ${selectClause} FROM data`;
+
+    if (whereParts.length > 0) {
+      sql += ` WHERE ${whereParts.join(' AND ')}`;
+    }
+
+    if (orderParts.length > 0) {
+      sql += ` ORDER BY ${orderParts.join(', ')}`;
+    }
+
+    // Only update textarea if builder has at least one active row
+    const hasActiveRow = Array.from(rows).some(r => r.querySelector('.sqp-col-select').value);
+    if (hasActiveRow) {
+      this.container.querySelector('#sqp-query').value = sql;
+    }
+  }
+
+  _clearBuilder() {
+    const tbody = this.container.querySelector('#sqp-builder-body');
+    tbody.innerHTML = '';
+    this._addBuilderRow();
+    this.container.querySelector('#sqp-query').value = '';
   }
 
   // ── Delimiter logic ──
@@ -313,6 +573,7 @@ export class SqlQueryPanel {
 
   show() {
     this.container.classList.remove('hidden');
+    this._refreshColumns();
     const textarea = this.container.querySelector('#sqp-query');
     textarea.focus();
     textarea.select();
