@@ -157,7 +157,7 @@ async function openLargeFile(filePath, fileSize) {
     }
   });
 
-  // Show loading state
+  // Show loading state (viewer defers _render to init(), so this is safe)
   editorContainer.innerHTML = '';
   editorContainer.appendChild(viewerContainer);
   viewerContainer.innerHTML = `
@@ -176,14 +176,7 @@ async function openLargeFile(filePath, fileSize) {
     return;
   }
 
-  // Initialize the viewer
-  viewer._render();
-  viewer._bindEvents();
-  viewer.onCursorChange((line, col) => {
-    if (tabId === tabManager.getActiveTabId()) {
-      statusBar.updatePosition(line, col);
-    }
-  });
+  // Initialize the viewer (init calls _render and _bindEvents internally)
   await viewer.init(filePath, result.totalLines, result.fileSize);
 
   const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
@@ -227,7 +220,7 @@ async function openFileByPath(filePath, lineNumber) {
   }
 
   const filename = file.filePath.split(/[/\\]/).pop();
-  const tabId = tabManager.createTab(filename, file.filePath);
+  const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
   tabManager.setFilePath(tabId, file.filePath);
   const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
   editorManager.activateTab(tabId);
@@ -267,7 +260,7 @@ async function openFile() {
     }
 
     const filename = file.filePath.split(/[/\\]/).pop();
-    const tabId = tabManager.createTab(filename, file.filePath);
+    const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
     tabManager.setFilePath(tabId, file.filePath);
     const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
     editorManager.activateTab(tabId);
@@ -295,22 +288,27 @@ async function saveFile() {
   const content = editorManager.getContent(tabId);
 
   if (tab.filePath) {
-    await window.api.saveFile(tab.filePath, content);
-    tabManager.setDirty(tabId, false);
+    const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
+    if (result.success) {
+      tabManager.setDirty(tabId, false);
+    } else {
+      statusBar.showMessage(`Save failed: ${result.error}`);
+    }
+    return result.success;
   } else {
-    await saveFileAs();
+    return await saveFileAs();
   }
 }
 
 async function saveFileAs() {
   const tabId = tabManager.getActiveTabId();
-  if (!tabId) return;
+  if (!tabId) return false;
 
   const tab = tabManager.getTab(tabId);
-  if (tab.isLargeFile) return; // Large files are read-only for now
+  if (tab.isLargeFile) return false; // Large files are read-only for now
 
   const content = editorManager.getContent(tabId);
-  const result = await window.api.saveFileAs(content, tab.filePath || tab.title);
+  const result = await window.api.saveFileAs(content, tab.filePath || tab.title, tab.encoding);
 
   if (result) {
     tabManager.setFilePath(tabId, result.filePath);
@@ -321,8 +319,42 @@ async function saveFileAs() {
     const langInfo = editorManager.getLanguageInfo(tabId);
     statusBar.updateLanguage(langInfo.displayName);
     window.api.notifyActiveFile(result.filePath);
+    return true;
   }
+  return false;
 }
+
+// Save a specific tab by ID (used by save callback and window close flow)
+async function saveTab(tabId) {
+  const tab = tabManager.getTab(tabId);
+  if (!tab || tab.isLargeFile) return false;
+
+  const content = editorManager.getContent(tabId);
+
+  if (tab.filePath) {
+    const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
+    if (result.success) {
+      tabManager.setDirty(tabId, false);
+      return true;
+    }
+    statusBar.showMessage(`Save failed: ${result.error}`);
+    return false;
+  }
+
+  // No file path — need Save As
+  const result = await window.api.saveFileAs(content, tab.title, tab.encoding);
+  if (result) {
+    tabManager.setFilePath(tabId, result.filePath);
+    const filename = result.filePath.split(/[/\\]/).pop();
+    tabManager.setTitle(tabId, filename);
+    tabManager.setDirty(tabId, false);
+    return true;
+  }
+  return false;
+}
+
+// Register save callback so TabManager can save tabs during close
+tabManager.setSaveCallback(saveTab);
 
 function toggleColumnSelection() {
   const enabled = editorManager.toggleColumnSelection();
@@ -461,6 +493,23 @@ window.api.onMenuZoomOut(() => editorManager.zoomOut());
 window.api.onMenuResetZoom(() => editorManager.resetZoom());
 window.api.onMenuOpenRecent((filePath) => openFileByPath(filePath));
 window.api.onMenuGoToLine(() => showGoToLineDialog());
+
+// ── Window Close Flow (main asks renderer for dirty tabs / to save) ──
+
+window.api.onGetDirtyTabs(() => {
+  const dirtyTabs = [];
+  for (const [tabId, tab] of tabManager.getAllTabs()) {
+    if (tab.dirty) {
+      dirtyTabs.push({ tabId, title: tab.title, filePath: tab.filePath });
+    }
+  }
+  window.api.sendDirtyTabsResponse(dirtyTabs);
+});
+
+window.api.onSaveTab(async (tabId) => {
+  const saved = await saveTab(tabId);
+  window.api.sendSaveTabResponse(saved);
+});
 
 // ── Start with one blank tab ──
 newFile();

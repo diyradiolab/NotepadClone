@@ -3,8 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   // File operations
   openFile: () => ipcRenderer.invoke('renderer:open-file'),
-  saveFile: (filePath, content) => ipcRenderer.invoke('renderer:save-file', { filePath, content }),
-  saveFileAs: (content, defaultPath) => ipcRenderer.invoke('renderer:save-file-as', { content, defaultPath }),
+  saveFile: (filePath, content, encoding) => ipcRenderer.invoke('renderer:save-file', { filePath, content, encoding }),
+  saveFileAs: (content, defaultPath, encoding) => ipcRenderer.invoke('renderer:save-file-as', { content, defaultPath, encoding }),
   getFileStats: (filePath) => ipcRenderer.invoke('renderer:get-file-stats', filePath),
   readFileByPath: (filePath) => ipcRenderer.invoke('renderer:read-file-by-path', filePath),
   reloadFile: (filePath) => ipcRenderer.invoke('renderer:reload-file', filePath),
@@ -16,9 +16,16 @@ contextBridge.exposeInMainWorld('api', {
   // Active file tracking (for Share menu)
   notifyActiveFile: (filePath) => ipcRenderer.invoke('renderer:notify-active-file', filePath),
 
+  // Dialogs
+  showSaveDialog: (fileName) => ipcRenderer.invoke('renderer:show-save-dialog', fileName),
+
   // File watching
   unwatchFile: (filePath) => ipcRenderer.invoke('renderer:unwatch-file', filePath),
-  onFileChanged: (callback) => ipcRenderer.on('main:file-changed', (_event, filePath) => callback(filePath)),
+  onFileChanged: (callback) => {
+    const handler = (_event, filePath) => callback(filePath);
+    ipcRenderer.on('main:file-changed', handler);
+    return () => ipcRenderer.removeListener('main:file-changed', handler);
+  },
 
   // Recent files
   getRecentFiles: () => ipcRenderer.invoke('renderer:get-recent-files'),
@@ -35,15 +42,27 @@ contextBridge.exposeInMainWorld('api', {
   searchLargeFile: (filePath, query, useRegex, caseSensitive) =>
     ipcRenderer.invoke('renderer:search-large-file', { filePath, query, useRegex, caseSensitive }),
   closeLargeFile: (filePath) => ipcRenderer.invoke('renderer:close-large-file', filePath),
-  onLargeFileProgress: (callback) =>
-    ipcRenderer.on('main:large-file-progress', (_event, data) => callback(data)),
-  onLargeFileSearchProgress: (callback) =>
-    ipcRenderer.on('main:large-file-search-progress', (_event, data) => callback(data)),
+  onLargeFileProgress: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('main:large-file-progress', handler);
+    return () => ipcRenderer.removeListener('main:large-file-progress', handler);
+  },
+  onLargeFileSearchProgress: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('main:large-file-search-progress', handler);
+    return () => ipcRenderer.removeListener('main:large-file-search-progress', handler);
+  },
 
   // Theme
   getTheme: () => ipcRenderer.invoke('renderer:get-theme'),
   setTheme: (theme) => ipcRenderer.invoke('renderer:set-theme', theme),
   onThemeChanged: (callback) => ipcRenderer.on('main:theme-changed', (_event, theme) => callback(theme)),
+
+  // Window close flow (main → renderer → main)
+  onGetDirtyTabs: (callback) => ipcRenderer.on('main:get-dirty-tabs', callback),
+  sendDirtyTabsResponse: (tabs) => ipcRenderer.send('main:get-dirty-tabs-response', tabs),
+  onSaveTab: (callback) => ipcRenderer.on('main:save-tab', (_event, tabId) => callback(tabId)),
+  sendSaveTabResponse: (saved) => ipcRenderer.send('main:save-tab-response', saved),
 
   // Menu events (main → renderer)
   onMenuNewFile: (callback) => ipcRenderer.on('main:new-file', callback),

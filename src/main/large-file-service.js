@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { EventEmitter } = require('events');
 
 const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
 
@@ -247,12 +246,12 @@ class LargeFileManager {
     this.handles = new Map(); // filePath → LargeFileHandle
   }
 
-  isLargeFile(filePath) {
+  async isLargeFile(filePath) {
     try {
-      const stats = fs.statSync(filePath);
-      return stats.size > LARGE_FILE_THRESHOLD;
+      const stats = await fs.promises.stat(filePath);
+      return { isLarge: stats.size > LARGE_FILE_THRESHOLD, size: stats.size };
     } catch {
-      return false;
+      return { isLarge: false, size: 0 };
     }
   }
 

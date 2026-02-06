@@ -76,7 +76,6 @@ export function setEditorTheme(themeName) {
 }
 
 const DEFAULT_OPTIONS = {
-  theme: currentTheme,
   fontSize: 14,
   fontFamily: "'Courier New', Consolas, 'Liberation Mono', monospace",
   lineNumbers: 'on',

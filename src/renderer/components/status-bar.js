@@ -42,4 +42,12 @@ export class StatusBar {
   updateLanguage(language) {
     this.languageEl.textContent = language || 'Plain Text';
   }
+
+  showMessage(message, duration = 5000) {
+    const prev = this.positionEl.textContent;
+    this.positionEl.textContent = message;
+    setTimeout(() => {
+      this.positionEl.textContent = prev;
+    }, duration);
+  }
 }

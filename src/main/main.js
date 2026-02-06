@@ -30,7 +30,25 @@ const store = new Store({
 
 let mainWindow = null;
 let currentFilePath = null; // track active file for Share menu
+let isClosing = false; // re-entrancy guard for window close handler
 const fileWatchers = new Map(); // filePath → chokidar watcher
+
+// Send a message to renderer and wait for a response on a paired channel (with timeout)
+function invokeRenderer(channel, ...args) {
+  return new Promise((resolve) => {
+    const responseChannel = `${channel}-response`;
+    const timeout = setTimeout(() => {
+      ipcMain.removeListener(responseChannel, handler);
+      resolve(null);
+    }, 5000);
+    const handler = (_event, result) => {
+      clearTimeout(timeout);
+      resolve(result);
+    };
+    ipcMain.once(responseChannel, handler);
+    mainWindow.webContents.send(channel, ...args);
+  });
+}
 
 function createWindow() {
   const { width, height } = store.get('windowBounds');
@@ -58,6 +76,40 @@ function createWindow() {
     store.set('windowBounds', { width: bounds.width, height: bounds.height });
   });
 
+  mainWindow.on('close', async (event) => {
+    if (isClosing) return;
+    event.preventDefault();
+
+    isClosing = true;
+    try {
+      const dirtyTabs = await invokeRenderer('main:get-dirty-tabs');
+      if (!dirtyTabs || dirtyTabs.length === 0) {
+        mainWindow.destroy();
+        return;
+      }
+
+      for (const tab of dirtyTabs) {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Save Changes',
+          message: `Save changes to ${tab.title}?`,
+          buttons: ['Save', "Don't Save", 'Cancel'],
+          defaultId: 0,
+          cancelId: 2,
+        });
+        if (response === 0) { // Save
+          const saved = await invokeRenderer('main:save-tab', tab.tabId);
+          if (!saved) return; // save failed or timed out, abort close
+        } else if (response === 2) { // Cancel
+          return;
+        }
+      }
+      mainWindow.destroy();
+    } finally {
+      isClosing = false;
+    }
+  });
+
   mainWindow.on('closed', () => {
     // Clean up all file watchers
     for (const watcher of fileWatchers.values()) {
@@ -66,14 +118,14 @@ function createWindow() {
     fileWatchers.clear();
     mainWindow = null;
   });
-
-  // Listen for OS theme changes and forward to renderer
-  nativeTheme.on('updated', () => {
-    if (mainWindow && store.get('theme') === 'system') {
-      mainWindow.webContents.send('main:theme-changed', 'system');
-    }
-  });
 }
+
+// Listen for OS theme changes and forward to renderer (registered once at module level)
+nativeTheme.on('updated', () => {
+  if (mainWindow && store.get('theme') === 'system') {
+    mainWindow.webContents.send('main:theme-changed', 'system');
+  }
+});
 
 app.whenReady().then(createWindow);
 
@@ -144,14 +196,14 @@ ipcMain.handle('renderer:open-file', async () => {
   const files = [];
   for (const filePath of result.filePaths) {
     // Check if large file
-    if (largeFileManager.isLargeFile(filePath)) {
-      const stats = fs.statSync(filePath);
+    const { isLarge, size } = await largeFileManager.isLargeFile(filePath);
+    if (isLarge) {
       addRecentFile(filePath);
       files.push({
         filePath,
         filename: path.basename(filePath),
         isLargeFile: true,
-        size: stats.size,
+        size,
       });
       continue;
     }
@@ -164,15 +216,20 @@ ipcMain.handle('renderer:open-file', async () => {
   return files;
 });
 
-ipcMain.handle('renderer:save-file', async (_event, { filePath, content }) => {
+ipcMain.handle('renderer:save-file', async (_event, { filePath, content, encoding }) => {
   // Temporarily stop watching to avoid self-triggered change events
   unwatchFile(filePath);
-  await writeFile(filePath, content);
-  watchFile(filePath);
-  return { success: true };
+  try {
+    await writeFile(filePath, content, encoding);
+    watchFile(filePath);
+    return { success: true };
+  } catch (err) {
+    try { watchFile(filePath); } catch {} // restore watcher safely
+    return { success: false, error: err.message };
+  }
 });
 
-ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath }) => {
+ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath, encoding }) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultPath || 'untitled.txt',
     filters: [
@@ -183,7 +240,7 @@ ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath })
 
   if (result.canceled) return null;
 
-  await writeFile(result.filePath, content);
+  await writeFile(result.filePath, content, encoding);
   addRecentFile(result.filePath);
   watchFile(result.filePath);
   return { filePath: result.filePath };
@@ -191,7 +248,7 @@ ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath })
 
 ipcMain.handle('renderer:get-file-stats', async (_event, filePath) => {
   try {
-    const stats = fs.statSync(filePath);
+    const stats = await fs.promises.stat(filePath);
     return { size: stats.size, mtime: stats.mtimeMs };
   } catch {
     return null;
@@ -218,14 +275,14 @@ ipcMain.handle('renderer:open-folder', async () => {
 
 ipcMain.handle('renderer:read-file-by-path', async (_event, filePath) => {
   try {
-    if (largeFileManager.isLargeFile(filePath)) {
-      const stats = fs.statSync(filePath);
+    const { isLarge, size } = await largeFileManager.isLargeFile(filePath);
+    if (isLarge) {
       addRecentFile(filePath);
       return {
         filePath,
         filename: path.basename(filePath),
         isLargeFile: true,
-        size: stats.size,
+        size,
       };
     }
 
@@ -290,6 +347,20 @@ ipcMain.handle('renderer:set-theme', async (_event, theme) => {
   return { success: true };
 });
 
+// ── Save Dialog (renderer-driven, for tab close) ──
+
+ipcMain.handle('renderer:show-save-dialog', async (_event, fileName) => {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: 'Save Changes',
+    message: `Save changes to ${fileName}?`,
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+  });
+  return ['save', 'discard', 'cancel'][response];
+});
+
 // ── Find in Files ──
 
 const BINARY_EXTENSIONS = new Set([
@@ -316,12 +387,12 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     return { results: [], error: 'Invalid regex' };
   }
 
-  function searchDir(dir) {
+  async function searchDir(dir) {
     if (results.length >= maxResults) return;
 
     let entries;
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
+      entries = await fs.promises.readdir(dir, { withFileTypes: true });
     } catch {
       return;
     }
@@ -334,7 +405,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name)) {
-          searchDir(fullPath);
+          await searchDir(fullPath);
         }
         continue;
       }
@@ -344,7 +415,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       // Skip large files
       try {
-        const stat = fs.statSync(fullPath);
+        const stat = await fs.promises.stat(fullPath);
         if (stat.size > 2 * 1024 * 1024) continue; // skip > 2MB
       } catch {
         continue;
@@ -352,7 +423,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       let content;
       try {
-        content = fs.readFileSync(fullPath, 'utf-8');
+        content = await fs.promises.readFile(fullPath, 'utf-8');
       } catch {
         continue;
       }
@@ -372,7 +443,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     }
   }
 
-  searchDir(dirPath);
+  await searchDir(dirPath);
   return { results, truncated: results.length >= maxResults };
 });
 
