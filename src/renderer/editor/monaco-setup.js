@@ -95,6 +95,7 @@ const DEFAULT_OPTIONS = {
   glyphMargin: false,
   renderLineHighlight: 'all',
   columnSelection: false,
+  find: { addExtraSpaceOnTop: false },
   quickSuggestions: false,
   suggestOnTriggerCharacters: false,
   acceptSuggestionOnEnter: 'off',
