@@ -1,0 +1,111 @@
+/* ── Large File Viewer ── */
+.lfv-wrapper {
+  display: flex;
+  height: 100%;
+  font-family: "Courier New", Consolas, "Liberation Mono", monospace;
+  font-size: 14px;
+  line-height: 20px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.lfv-gutter {
+  width: 60px;
+  min-width: 60px;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-secondary);
+  overflow: hidden;
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.lfv-line-number {
+  padding-right: 8px;
+  white-space: pre;
+  font-size: 13px;
+}
+
+.lfv-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+}
+
+.lfv-spacer {
+  width: 1px;
+  pointer-events: none;
+}
+
+.lfv-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.lfv-line {
+  white-space: pre;
+  padding-left: 8px;
+}
+
+.lfv-line:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.lfv-status {
+  position: absolute;
+  top: 4px;
+  right: 20px;
+  background: rgba(0, 122, 204, 0.9);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Loading overlay ── */
+.lfv-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  z-index: 20;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+[data-theme="dark"] .lfv-loading {
+  background: var(--bg-surface);
+}
+
+.lfv-progress-bar {
+  width: 300px;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.lfv-progress-fill {
+  height: 100%;
+  background: var(--text-accent);
+  transition: width 0.2s;
+  width: 0%;
+}
+
+.lfv-progress-text {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:;">
+  <title>NotepadClone</title>
+</head>
+<body>
+  <div id="app">
+    <!-- Toolbar -->
+    <div id="toolbar" class="toolbar">
+      <button class="toolbar-btn" data-action="new" title="New (Ctrl+N)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5H3.5a1 1 0 00-1 1v11a1 1 0 001 1h9a1 1 0 001-1V6L9 1.5z"/><polyline points="9,1.5 9,6 13.5,6"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="open" title="Open (Ctrl+O)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13.5V4a1 1 0 011-1h3.5l1.5 1.5H13a1 1 0 011 1v1"/><path d="M1.5 13.5l1.5-5h11l-1.5 5H1.5z"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="save" title="Save (Ctrl+S)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 14.5h-9a1 1 0 01-1-1v-11a1 1 0 011-1h7l3 3v9a1 1 0 01-1 1z"/><rect x="5" y="1.5" width="5" height="4"/><rect x="4.5" y="9" width="7" height="5.5"/></svg></span>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button class="toolbar-btn" data-action="undo" title="Undo (Ctrl+Z)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7a3.5 3.5 0 010 7H8"/><polyline points="6,3 3,6 6,9"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="redo" title="Redo (Ctrl+Y)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 6H6a3.5 3.5 0 000 7h2"/><polyline points="10,3 13,6 10,9"/></svg></span>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button class="toolbar-btn" data-action="find" title="Find (Ctrl+F)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4"/><line x1="14" y1="14" x2="9.8" y2="9.8"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="replace" title="Replace (Ctrl+H)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="3"/><line x1="7.1" y1="7.1" x2="9" y2="9"/><circle cx="11" cy="11" r="3"/><line x1="9" y1="5" x2="12" y2="5"/><polyline points="11,3.5 12.5,5 11,6.5"/></svg></span>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button class="toolbar-btn" data-action="find-in-files" title="Find in Files (Ctrl+Shift+F)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="8" height="11" rx="1"/><circle cx="11.5" cy="11.5" r="3"/><line x1="14" y1="14" x2="13.6" y2="13.6"/><line x1="4" y1="5" x2="7.5" y2="5"/><line x1="4" y1="8" x2="7" y2="8"/></svg></span>
+      </button>
+      <span class="toolbar-separator"></span>
+      <button class="toolbar-btn" data-action="word-wrap" title="Toggle Word Wrap">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="3.5" x2="14" y2="3.5"/><path d="M2 8h9.5a2 2 0 010 4H9"/><polyline points="10.5,10.5 9,12 10.5,13.5"/><line x1="2" y1="12.5" x2="6" y2="12.5"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="column-select" id="btn-column-select" title="Column Selection Mode (Alt+Shift+C)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="8" height="12" rx="0.5" stroke-dasharray="2,2"/><line x1="6" y1="5" x2="6" y2="11"/><line x1="10" y1="5" x2="10" y2="11"/><line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="11" x2="10" y2="11"/></svg></span>
+      </button>
+    </div>
+
+    <!-- Tab bar -->
+    <div id="tab-bar" class="tab-bar">
+      <!-- Tabs injected here -->
+    </div>
+
+    <!-- Main content area -->
+    <div id="main-content" class="main-content">
+      <!-- File Explorer -->
+      <div id="file-explorer" class="file-explorer hidden"></div>
+      <!-- Editor container -->
+      <div id="editor-container" class="editor-container"></div>
+    </div>
+
+    <!-- Find in Files panel -->
+    <div id="find-in-files" class="find-in-files hidden"></div>
+
+    <!-- Status bar -->
+    <div id="status-bar" class="status-bar">
+      <span id="status-position" class="status-item">Ln 1, Col 1</span>
+      <span id="status-selection" class="status-item"></span>
+      <span class="status-spacer"></span>
+      <span id="status-encoding" class="status-item">UTF-8</span>
+      <span id="status-line-ending" class="status-item">CRLF</span>
+      <span id="status-selection-mode" class="status-item">Normal</span>
+      <span id="status-language" class="status-item">Plain Text</span>
+    </div>
+  </div>
+</body>
+</html>

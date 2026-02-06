@@ -1,0 +1,28 @@
+/* ── Notepad++ Classic Theme for Monaco ── */
+
+/* Override Monaco's default theme to match Notepad++ */
+.monaco-editor {
+  --notepadpp-bg: #ffffff;
+  --notepadpp-fg: #000000;
+  --notepadpp-line-number: #808080;
+  --notepadpp-line-number-active: #000000;
+  --notepadpp-selection: #add6ff;
+  --notepadpp-current-line: #e8e8ff;
+  --notepadpp-indent-guide: #d0d0d0;
+}
+
+/* Ensure Monaco fills its container */
+.monaco-editor,
+.monaco-editor .overflow-guard {
+  border: none !important;
+}
+
+/* Gutter / line numbers area styling */
+.monaco-editor .margin {
+  background: #f0f0f0 !important;
+}
+
+/* Current line highlight — subtle blue like Notepad++ */
+.monaco-editor .view-overlays .current-line {
+  border: none !important;
+}

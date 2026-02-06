@@ -1,0 +1,402 @@
+/* ── Theme Variables ── */
+:root {
+  --bg-primary: #f0f0f0;
+  --bg-secondary: #e8e8e8;
+  --bg-tertiary: #d8d8d8;
+  --bg-surface: #ffffff;
+  --bg-toolbar: linear-gradient(to bottom, #fafafa, #e8e8e8);
+  --bg-toolbar-hover: #d8e8f8;
+  --bg-toolbar-active: #c0d8f0;
+  --text-primary: #1e1e1e;
+  --text-secondary: #444;
+  --text-muted: #888;
+  --text-accent: #007acc;
+  --border-primary: #b0b0b0;
+  --border-secondary: #c0c0c0;
+  --tab-bg: #d8d8d8;
+  --tab-hover: #e8e8e8;
+  --tab-active: #ffffff;
+  --tab-dirty: #c00;
+  --statusbar-bg: #007acc;
+  --statusbar-text: #ffffff;
+  --statusbar-border: rgba(255, 255, 255, 0.3);
+  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: #c0c0c0;
+  --scrollbar-thumb-hover: #a0a0a0;
+  --menu-bg: #ffffff;
+  --menu-hover: #e8e8e8;
+  --menu-shadow: rgba(0, 0, 0, 0.15);
+  --toolbar-border-hover: #88b8e0;
+  --tab-bar-bg: #e4e4e4;
+  --tab-border: #b0b0b0;
+  --tab-close-hover-bg: #e81123;
+  --drag-accent: #007acc;
+  --input-border-focus: #007acc;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --bg-surface: #1e1e1e;
+  --bg-toolbar: linear-gradient(to bottom, #333333, #2d2d2d);
+  --bg-toolbar-hover: #3e3e42;
+  --bg-toolbar-active: #094771;
+  --text-primary: #cccccc;
+  --text-secondary: #b0b0b0;
+  --text-muted: #6e6e6e;
+  --text-accent: #3794ff;
+  --border-primary: #3e3e42;
+  --border-secondary: #3e3e42;
+  --tab-bg: #2d2d2d;
+  --tab-hover: #3e3e42;
+  --tab-active: #1e1e1e;
+  --tab-dirty: #e74856;
+  --statusbar-bg: #007acc;
+  --statusbar-text: #ffffff;
+  --statusbar-border: rgba(255, 255, 255, 0.2);
+  --scrollbar-track: #1e1e1e;
+  --scrollbar-thumb: #424242;
+  --scrollbar-thumb-hover: #555555;
+  --menu-bg: #252526;
+  --menu-hover: #094771;
+  --menu-shadow: rgba(0, 0, 0, 0.5);
+  --toolbar-border-hover: #094771;
+  --tab-bar-bg: #252526;
+  --tab-border: #3e3e42;
+  --tab-close-hover-bg: #e81123;
+  --drag-accent: #3794ff;
+  --input-border-focus: #3794ff;
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 2px 4px;
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-toolbar-hover);
+  border-color: var(--toolbar-border-hover);
+}
+
+.toolbar-btn:active {
+  background: var(--bg-toolbar-active);
+}
+
+.toolbar-btn-active {
+  background: var(--bg-toolbar-active);
+  border-color: var(--toolbar-border-hover);
+}
+
+.toolbar-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border-secondary);
+}
+
+/* ── Tab Bar ── */
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  height: 28px;
+  background: var(--tab-bar-bg);
+  border-bottom: 1px solid var(--border-primary);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  margin-left: 1px;
+  border: 1px solid var(--tab-border);
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  background: var(--tab-bg);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 200px;
+  user-select: none;
+  color: var(--text-primary);
+}
+
+.tab:hover {
+  background: var(--tab-hover);
+}
+
+.tab.active {
+  background: var(--tab-active);
+  border-bottom: 1px solid var(--tab-active);
+  margin-bottom: -1px;
+  height: 25px;
+}
+
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 6px;
+}
+
+.tab-dirty {
+  color: var(--tab-dirty);
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.tab-close:hover {
+  background: var(--tab-close-hover-bg);
+  color: white;
+}
+
+/* ── Main Content ── */
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Status Bar ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--statusbar-bg);
+  color: var(--statusbar-text);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.status-item {
+  padding: 0 10px;
+  border-right: 1px solid var(--statusbar-border);
+  white-space: nowrap;
+}
+
+.status-item:last-child {
+  border-right: none;
+}
+
+.status-spacer {
+  flex: 1;
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 6px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ── Tab Drag & Drop ── */
+.tab.dragging {
+  opacity: 0.5;
+}
+
+.tab.drag-over {
+  border-left: 2px solid var(--drag-accent);
+}
+
+/* ── Tab Context Menu ── */
+.tab-context-menu {
+  position: fixed;
+  background: var(--menu-bg);
+  border: 1px solid var(--border-secondary);
+  box-shadow: 2px 2px 6px var(--menu-shadow);
+  z-index: 1000;
+  min-width: 180px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.context-menu-item {
+  padding: 6px 24px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.context-menu-item:hover {
+  background: var(--menu-hover);
+}
+
+/* ── Go To Line Dialog ── */
+.goto-line-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.goto-line-dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  padding: 16px 20px;
+  min-width: 300px;
+  box-shadow: 0 4px 16px var(--menu-shadow);
+  color: var(--text-primary);
+}
+
+.goto-line-dialog label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.goto-line-dialog input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.goto-line-dialog input:focus {
+  border-color: var(--input-border-focus);
+}
+
+.goto-line-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.goto-line-buttons button {
+  padding: 4px 16px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.goto-line-buttons button:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.goto-line-buttons button.primary {
+  background: var(--text-accent);
+  border-color: var(--text-accent);
+  color: #ffffff;
+}
+
+.goto-line-buttons button.primary:hover {
+  opacity: 0.9;
+}
