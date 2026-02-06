@@ -220,7 +220,7 @@ async function openFileByPath(filePath, lineNumber) {
   }
 
   const filename = file.filePath.split(/[/\\]/).pop();
-  const tabId = tabManager.createTab(filename, file.filePath);
+  const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
   tabManager.setFilePath(tabId, file.filePath);
   const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
   editorManager.activateTab(tabId);
@@ -260,7 +260,7 @@ async function openFile() {
     }
 
     const filename = file.filePath.split(/[/\\]/).pop();
-    const tabId = tabManager.createTab(filename, file.filePath);
+    const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
     tabManager.setFilePath(tabId, file.filePath);
     const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
     editorManager.activateTab(tabId);
@@ -288,22 +288,27 @@ async function saveFile() {
   const content = editorManager.getContent(tabId);
 
   if (tab.filePath) {
-    await window.api.saveFile(tab.filePath, content);
-    tabManager.setDirty(tabId, false);
+    const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
+    if (result.success) {
+      tabManager.setDirty(tabId, false);
+    } else {
+      statusBar.showMessage(`Save failed: ${result.error}`);
+    }
+    return result.success;
   } else {
-    await saveFileAs();
+    return await saveFileAs();
   }
 }
 
 async function saveFileAs() {
   const tabId = tabManager.getActiveTabId();
-  if (!tabId) return;
+  if (!tabId) return false;
 
   const tab = tabManager.getTab(tabId);
-  if (tab.isLargeFile) return; // Large files are read-only for now
+  if (tab.isLargeFile) return false; // Large files are read-only for now
 
   const content = editorManager.getContent(tabId);
-  const result = await window.api.saveFileAs(content, tab.filePath || tab.title);
+  const result = await window.api.saveFileAs(content, tab.filePath || tab.title, tab.encoding);
 
   if (result) {
     tabManager.setFilePath(tabId, result.filePath);
@@ -314,7 +319,9 @@ async function saveFileAs() {
     const langInfo = editorManager.getLanguageInfo(tabId);
     statusBar.updateLanguage(langInfo.displayName);
     window.api.notifyActiveFile(result.filePath);
+    return true;
   }
+  return false;
 }
 
 function toggleColumnSelection() {

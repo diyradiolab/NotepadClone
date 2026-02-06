@@ -3,8 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   // File operations
   openFile: () => ipcRenderer.invoke('renderer:open-file'),
-  saveFile: (filePath, content) => ipcRenderer.invoke('renderer:save-file', { filePath, content }),
-  saveFileAs: (content, defaultPath) => ipcRenderer.invoke('renderer:save-file-as', { content, defaultPath }),
+  saveFile: (filePath, content, encoding) => ipcRenderer.invoke('renderer:save-file', { filePath, content, encoding }),
+  saveFileAs: (content, defaultPath, encoding) => ipcRenderer.invoke('renderer:save-file-as', { content, defaultPath, encoding }),
   getFileStats: (filePath) => ipcRenderer.invoke('renderer:get-file-stats', filePath),
   readFileByPath: (filePath) => ipcRenderer.invoke('renderer:read-file-by-path', filePath),
   reloadFile: (filePath) => ipcRenderer.invoke('renderer:reload-file', filePath),

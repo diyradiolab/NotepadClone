@@ -144,14 +144,14 @@ ipcMain.handle('renderer:open-file', async () => {
   const files = [];
   for (const filePath of result.filePaths) {
     // Check if large file
-    if (largeFileManager.isLargeFile(filePath)) {
-      const stats = fs.statSync(filePath);
+    const { isLarge, size } = await largeFileManager.isLargeFile(filePath);
+    if (isLarge) {
       addRecentFile(filePath);
       files.push({
         filePath,
         filename: path.basename(filePath),
         isLargeFile: true,
-        size: stats.size,
+        size,
       });
       continue;
     }
@@ -164,15 +164,20 @@ ipcMain.handle('renderer:open-file', async () => {
   return files;
 });
 
-ipcMain.handle('renderer:save-file', async (_event, { filePath, content }) => {
+ipcMain.handle('renderer:save-file', async (_event, { filePath, content, encoding }) => {
   // Temporarily stop watching to avoid self-triggered change events
   unwatchFile(filePath);
-  await writeFile(filePath, content);
-  watchFile(filePath);
-  return { success: true };
+  try {
+    await writeFile(filePath, content, encoding);
+    watchFile(filePath);
+    return { success: true };
+  } catch (err) {
+    try { watchFile(filePath); } catch {} // restore watcher safely
+    return { success: false, error: err.message };
+  }
 });
 
-ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath }) => {
+ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath, encoding }) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultPath || 'untitled.txt',
     filters: [
@@ -183,7 +188,7 @@ ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath })
 
   if (result.canceled) return null;
 
-  await writeFile(result.filePath, content);
+  await writeFile(result.filePath, content, encoding);
   addRecentFile(result.filePath);
   watchFile(result.filePath);
   return { filePath: result.filePath };
@@ -191,7 +196,7 @@ ipcMain.handle('renderer:save-file-as', async (_event, { content, defaultPath })
 
 ipcMain.handle('renderer:get-file-stats', async (_event, filePath) => {
   try {
-    const stats = fs.statSync(filePath);
+    const stats = await fs.promises.stat(filePath);
     return { size: stats.size, mtime: stats.mtimeMs };
   } catch {
     return null;
@@ -218,14 +223,14 @@ ipcMain.handle('renderer:open-folder', async () => {
 
 ipcMain.handle('renderer:read-file-by-path', async (_event, filePath) => {
   try {
-    if (largeFileManager.isLargeFile(filePath)) {
-      const stats = fs.statSync(filePath);
+    const { isLarge, size } = await largeFileManager.isLargeFile(filePath);
+    if (isLarge) {
       addRecentFile(filePath);
       return {
         filePath,
         filename: path.basename(filePath),
         isLargeFile: true,
-        size: stats.size,
+        size,
       };
     }
 
@@ -316,12 +321,12 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     return { results: [], error: 'Invalid regex' };
   }
 
-  function searchDir(dir) {
+  async function searchDir(dir) {
     if (results.length >= maxResults) return;
 
     let entries;
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
+      entries = await fs.promises.readdir(dir, { withFileTypes: true });
     } catch {
       return;
     }
@@ -334,7 +339,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name)) {
-          searchDir(fullPath);
+          await searchDir(fullPath);
         }
         continue;
       }
@@ -344,7 +349,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       // Skip large files
       try {
-        const stat = fs.statSync(fullPath);
+        const stat = await fs.promises.stat(fullPath);
         if (stat.size > 2 * 1024 * 1024) continue; // skip > 2MB
       } catch {
         continue;
@@ -352,7 +357,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
 
       let content;
       try {
-        content = fs.readFileSync(fullPath, 'utf-8');
+        content = await fs.promises.readFile(fullPath, 'utf-8');
       } catch {
         continue;
       }
@@ -372,7 +377,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     }
   }
 
-  searchDir(dirPath);
+  await searchDir(dirPath);
   return { results, truncated: results.length >= maxResults };
 });
 

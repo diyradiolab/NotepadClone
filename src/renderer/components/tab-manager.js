@@ -17,13 +17,14 @@ export class TabManager {
     this._initContextMenu();
   }
 
-  createTab(title = 'new 1', filePath = null) {
+  createTab(title = 'new 1', filePath = null, encoding = 'UTF-8') {
     const tabId = `tab-${this.nextId++}`;
 
     this.tabs.set(tabId, {
       title,
       filePath,
       dirty: false,
+      encoding,
     });
 
     this._renderTab(tabId);
