@@ -52,7 +52,9 @@ export class EditorManager {
     // Save current editor state
     if (this.activeTabId && this.editors.has(this.activeTabId)) {
       const current = this.editors.get(this.activeTabId);
-      if (current.isDiffTab) {
+      if (current.isHistoryTab) {
+        // Nothing to dispose — history panel manages its own diff editors
+      } else if (current.isDiffTab) {
         if (current.diffEditor) {
           current.diffEditor.dispose();
           current.diffEditor = null;
@@ -71,6 +73,9 @@ export class EditorManager {
     if (!entry) return;
 
     this.activeTabId = tabId;
+
+    // History tab: handled externally by GitHistoryPanel
+    if (entry.isHistoryTab) return;
 
     // Branch: diff tab vs regular tab
     if (entry.isDiffTab) {

@@ -106,4 +106,9 @@ contextBridge.exposeInMainWorld('api', {
   gitCommit: (dirPath, message) => ipcRenderer.invoke('renderer:git-commit', { dirPath, message }),
   gitPush: (dirPath) => ipcRenderer.invoke('renderer:git-push', dirPath),
   gitPull: (dirPath) => ipcRenderer.invoke('renderer:git-pull', dirPath),
+  gitFileLog: (dirPath, filePath) => ipcRenderer.invoke('renderer:git-file-log', { dirPath, filePath }),
+  gitFileDiff: (dirPath, hash, filePath) => ipcRenderer.invoke('renderer:git-file-diff', { dirPath, hash, filePath }),
+
+  // Menu events — Git History
+  onMenuGitHistory: (callback) => ipcRenderer.on('main:git-history', callback),
 });

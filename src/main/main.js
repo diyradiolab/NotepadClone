@@ -566,3 +566,11 @@ ipcMain.handle('renderer:git-push', async (_event, dirPath) => {
 ipcMain.handle('renderer:git-pull', async (_event, dirPath) => {
   return gitService.pull(dirPath);
 });
+
+ipcMain.handle('renderer:git-file-log', async (_event, { dirPath, filePath }) => {
+  return gitService.fileLog(dirPath, filePath);
+});
+
+ipcMain.handle('renderer:git-file-diff', async (_event, { dirPath, hash, filePath }) => {
+  return gitService.fileShow(dirPath, hash, filePath);
+});

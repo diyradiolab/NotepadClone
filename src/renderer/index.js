@@ -8,6 +8,7 @@ import './styles/clipboard-history-dialog.css';
 import './styles/compare-dialog.css';
 import './styles/git-commit-dialog.css';
 import './styles/sql-query-panel.css';
+import './styles/git-history-panel.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -19,6 +20,7 @@ import { ClipboardHistoryDialog } from './components/clipboard-history-dialog';
 import { CompareTabDialog } from './components/compare-tab-dialog';
 import { GitCommitDialog } from './components/git-commit-dialog';
 import { SqlQueryPanel } from './components/sql-query-panel';
+import { GitHistoryPanel } from './components/git-history-panel';
 import { setEditorTheme } from './editor/monaco-setup';
 
 // ── Initialize Components ──
@@ -39,6 +41,7 @@ const recentFilesDialog = new RecentFilesDialog();
 const clipboardHistoryDialog = new ClipboardHistoryDialog();
 const compareTabDialog = new CompareTabDialog();
 const gitCommitDialog = new GitCommitDialog();
+const gitHistoryPanel = new GitHistoryPanel(tabManager, editorManager);
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -95,6 +98,7 @@ const gitStageFileBtn = document.getElementById('git-stage-file-btn');
 const gitCommitBtn = document.getElementById('git-commit-btn');
 const gitPushBtn = document.getElementById('git-push-btn');
 const gitPullBtn = document.getElementById('git-pull-btn');
+const gitHistoryBtn = document.getElementById('git-history-btn');
 
 function getActiveFileDirPath() {
   const tabId = tabManager.getActiveTabId();
@@ -141,6 +145,10 @@ function updateGitUI() {
   gitCommitBtn.style.display = gitState.isRepo ? '' : 'none';
   gitPushBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
   gitPullBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
+
+  // History button: visible when repo is active and active tab has a file
+  const activeTabForHistory = tabManager.getTab(tabManager.getActiveTabId());
+  gitHistoryBtn.style.display = (gitState.isRepo && activeTabForHistory && activeTabForHistory.filePath) ? '' : 'none';
 
   // Disable stage when nothing dirty
   gitStageBtn.disabled = gitState.dirtyCount === 0;
@@ -243,6 +251,14 @@ async function gitPull() {
   await refreshGitStatus();
 }
 
+function showGitFileHistory() {
+  const tabId = tabManager.getActiveTabId();
+  if (!tabId) return;
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.filePath) return;
+  gitHistoryPanel.show(tab.filePath);
+}
+
 // ── Theme Logic ──
 
 function resolveTheme(preference) {
@@ -290,6 +306,14 @@ tabManager.onActivate((tabId) => {
       editorContainer.appendChild(viewer.container);
     }
     statusBar.updateLanguage('Large File');
+  } else if (tab && tab.isHistoryTab) {
+    const entry = editorManager.editors.get(tabId);
+    if (entry) {
+      editorManager.activeTabId = tabId;
+      editorManager.container.innerHTML = '';
+      gitHistoryPanel._render(tabId, entry.filePath, entry.commits, entry.dirPath, entry.filename);
+    }
+    statusBar.updateLanguage('Git History');
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
@@ -311,6 +335,14 @@ tabManager.onClose((tabId) => {
   const tab = tabManager.getTab(tabId);
   if (tab && tab.filePath) {
     window.api.unwatchFile(tab.filePath);
+  }
+
+  // Clean up history tab
+  if (tab && tab.isHistoryTab) {
+    editorManager.editors.delete(tabId);
+    if (editorManager.activeTabId === tabId) {
+      editorManager.activeTabId = null;
+    }
   }
 
   // Clean up large file viewer
@@ -652,6 +684,10 @@ fileExplorer.onFileOpen((filePath) => {
   openFileByPath(filePath);
 });
 
+fileExplorer.onFileHistory((filePath) => {
+  gitHistoryPanel.show(filePath);
+});
+
 // ── Find in Files → Open Result ──
 
 findInFiles.onResultClick((filePath, line) => {
@@ -704,6 +740,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-commit': gitCommitOpen(); break;
     case 'git-push': gitPush(); break;
     case 'git-pull': gitPull(); break;
+    case 'git-history': showGitFileHistory(); break;
   }
 });
 
@@ -737,6 +774,7 @@ window.api.onMenuSqlQuery(() => sqlQueryPanel.toggle());
 window.api.onMenuCompareTabs(() => {
   compareTabDialog.show(tabManager.getAllTabs(), tabManager.getActiveTabId());
 });
+window.api.onMenuGitHistory(() => showGitFileHistory());
 
 // ── Window Close Flow (main asks renderer for dirty tabs / to save) ──
 

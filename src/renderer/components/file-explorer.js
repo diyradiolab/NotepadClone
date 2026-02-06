@@ -7,7 +7,10 @@ export class FileExplorer {
     this.container = container;
     this.rootPath = null;
     this.onFileOpenCallbacks = [];
+    this.onFileHistoryCallbacks = [];
+    this._contextMenu = null;
     this._render();
+    this._bindContextMenuDismiss();
   }
 
   _render() {
@@ -91,6 +94,13 @@ export class FileExplorer {
       row.classList.add('active');
     });
 
+    // Context menu
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._showContextMenu(e.clientX, e.clientY, fullPath);
+    });
+
     node.appendChild(row);
     return node;
   }
@@ -150,6 +160,47 @@ export class FileExplorer {
 
   onFileOpen(callback) {
     this.onFileOpenCallbacks.push(callback);
+  }
+
+  onFileHistory(callback) {
+    this.onFileHistoryCallbacks.push(callback);
+  }
+
+  _showContextMenu(x, y, filePath) {
+    this._dismissContextMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'explorer-context-menu';
+    menu.style.position = 'fixed';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.style.zIndex = '9999';
+
+    const historyItem = document.createElement('div');
+    historyItem.className = 'explorer-context-item';
+    historyItem.textContent = 'Git History';
+    historyItem.addEventListener('click', () => {
+      this._dismissContextMenu();
+      this.onFileHistoryCallbacks.forEach(cb => cb(filePath));
+    });
+    menu.appendChild(historyItem);
+
+    document.body.appendChild(menu);
+    this._contextMenu = menu;
+  }
+
+  _dismissContextMenu() {
+    if (this._contextMenu) {
+      this._contextMenu.remove();
+      this._contextMenu = null;
+    }
+  }
+
+  _bindContextMenuDismiss() {
+    document.addEventListener('click', () => this._dismissContextMenu());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this._dismissContextMenu();
+    });
   }
 
   toggle() {

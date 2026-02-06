@@ -137,3 +137,24 @@
 .explorer-resize:hover {
   background: var(--text-accent);
 }
+
+/* ── Context Menu ── */
+.explorer-context-menu {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 4px 0;
+  min-width: 140px;
+}
+
+.explorer-context-item {
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.explorer-context-item:hover {
+  background: var(--bg-hover, var(--bg-secondary));
+}

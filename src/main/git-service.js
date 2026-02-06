@@ -129,4 +129,38 @@ async function stageFile(cwd, filePath) {
   }
 }
 
-module.exports = { getStatus, init, stageAll, stageFile, commit, push, pull };
+async function fileLog(cwd, filePath, maxCount = 200) {
+  try {
+    const repoRoot = await runGit(['rev-parse', '--show-toplevel'], cwd);
+    const relPath = require('path').relative(repoRoot, filePath);
+    const output = await runGit(
+      ['log', `--pretty=format:%H|%an|%aI|%s`, `-n`, String(maxCount), '--', relPath],
+      cwd
+    );
+    if (!output) return [];
+    return output.split('\n').map(line => {
+      const parts = line.split('|');
+      return {
+        hash: parts[0],
+        author: parts[1],
+        date: parts[2],
+        subject: parts.slice(3).join('|'),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function fileShow(cwd, hash, filePath) {
+  try {
+    const repoRoot = await runGit(['rev-parse', '--show-toplevel'], cwd);
+    const relPath = require('path').relative(repoRoot, filePath).replace(/\\/g, '/');
+    const content = await runGit(['show', `${hash}:${relPath}`], cwd);
+    return content;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { getStatus, init, stageAll, stageFile, commit, push, pull, fileLog, fileShow };

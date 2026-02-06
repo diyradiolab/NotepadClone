@@ -158,6 +158,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
         },
         { type: 'separator' },
         {
+          label: 'Git File History',
+          accelerator: 'CmdOrCtrl+Shift+H',
+          click: () => mainWindow.webContents.send('main:git-history'),
+        },
+        { type: 'separator' },
+        {
           label: 'SQL Query...',
           accelerator: 'CmdOrCtrl+Shift+Q',
           click: () => mainWindow.webContents.send('main:sql-query'),
