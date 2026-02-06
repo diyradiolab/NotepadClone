@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('api', {
   // Active file tracking (for Share menu)
   notifyActiveFile: (filePath) => ipcRenderer.invoke('renderer:notify-active-file', filePath),
 
+  // Open external URLs (for markdown preview links)
+  openExternal: (url) => ipcRenderer.invoke('renderer:open-external', url),
+
   // Dialogs
   showSaveDialog: (fileName) => ipcRenderer.invoke('renderer:show-save-dialog', fileName),
 

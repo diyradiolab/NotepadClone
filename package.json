@@ -118,7 +118,9 @@
     "alasql": "^4.17.0",
     "chardet": "^2.1.1",
     "chokidar": "^3.6.0",
+    "dompurify": "^3.3.1",
     "electron-store": "^8.2.0",
+    "markdown-it": "^14.1.0",
     "monaco-editor": "^0.45.0"
   }
 }

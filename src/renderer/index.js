@@ -9,6 +9,7 @@ import './styles/compare-dialog.css';
 import './styles/git-commit-dialog.css';
 import './styles/sql-query-panel.css';
 import './styles/git-history-panel.css';
+import './styles/markdown-preview.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -22,6 +23,7 @@ import { GitCommitDialog } from './components/git-commit-dialog';
 import { SqlQueryPanel } from './components/sql-query-panel';
 import { GitHistoryPanel } from './components/git-history-panel';
 import { setEditorTheme } from './editor/monaco-setup';
+import { MarkdownPreview } from './components/markdown-preview';
 
 // ── Initialize Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -42,6 +44,7 @@ const clipboardHistoryDialog = new ClipboardHistoryDialog();
 const compareTabDialog = new CompareTabDialog();
 const gitCommitDialog = new GitCommitDialog();
 const gitHistoryPanel = new GitHistoryPanel(tabManager, editorManager);
+const markdownPreview = new MarkdownPreview(editorContainer);
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -293,12 +296,199 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', asy
   }
 });
 
+// ── Markdown Preview ──
+
+const mdToggleBtn = document.getElementById('btn-markdown-toggle');
+const mdSeparator = document.getElementById('md-separator');
+const mdToggleIcon = document.getElementById('md-toggle-icon');
+const mdFormatToolbar = document.getElementById('markdown-format-toolbar');
+
+// Eye icon for read mode (click to switch to edit)
+const MD_ICON_EYE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2.5"/></svg>';
+// Pencil icon for edit mode (click to switch to read)
+const MD_ICON_PENCIL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/></svg>';
+
+function updateMarkdownToolbar(isMarkdown, mode) {
+  if (!isMarkdown) {
+    mdToggleBtn.style.display = 'none';
+    mdSeparator.style.display = 'none';
+    mdFormatToolbar.style.display = 'none';
+    return;
+  }
+  mdToggleBtn.style.display = '';
+  mdSeparator.style.display = '';
+  if (mode === 'read') {
+    mdToggleIcon.innerHTML = MD_ICON_PENCIL;
+    mdToggleBtn.title = 'Switch to Edit Mode (Ctrl+Shift+M)';
+    mdFormatToolbar.style.display = 'none';
+  } else {
+    mdToggleIcon.innerHTML = MD_ICON_EYE;
+    mdToggleBtn.title = 'Switch to Read Mode (Ctrl+Shift+M)';
+    mdFormatToolbar.style.display = '';
+  }
+}
+
+function toggleMarkdownMode() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isMarkdown) return;
+
+  const entry = editorManager.editors.get(tabId);
+
+  if (tab.markdownMode === 'read') {
+    // Switch to edit
+    tab.markdownMode = 'edit';
+    markdownPreview.destroy();
+    editorManager.activateTab(tabId);
+    updateMarkdownToolbar(true, 'edit');
+    statusBar.updateLanguage('Markdown (Edit)');
+  } else {
+    // Switch to read — save editor state first
+    const editor = editorManager.getActiveEditor();
+    if (editor && entry) {
+      entry.viewState = editor.saveViewState();
+      editor.dispose();
+      entry.editor = null;
+    }
+    tab.markdownMode = 'read';
+    editorManager.container.innerHTML = '';
+    const content = entry.model.getValue();
+    markdownPreview.render(content, tab.filePath);
+    updateMarkdownToolbar(true, 'read');
+    statusBar.updateLanguage('Markdown (Read)');
+  }
+}
+
+function isMarkdownFile(filename) {
+  if (!filename) return false;
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.md') || lower.endsWith('.markdown');
+}
+
+// ── Markdown Formatting (data-driven action map) ──
+
+const MARKDOWN_ACTIONS = {
+  bold:   { wrap: '**', placeholder: 'text' },
+  italic: { wrap: '*',  placeholder: 'text' },
+  code:   { wrap: '`',  placeholder: 'code' },
+  h1:     { linePrefix: '# ',  placeholder: 'Heading' },
+  h2:     { linePrefix: '## ', placeholder: 'Heading' },
+  ul:     { linePrefix: '- ',  placeholder: 'Item' },
+  ol:     { linePrefix: '1. ', placeholder: 'Item' },
+  link:   { before: '[', after: '](url)', placeholder: 'text', cursorTarget: 'url' },
+};
+
+function wrapSelection(editor, selection, selectedText, wrap, placeholder) {
+  const text = selectedText || placeholder;
+  const newText = wrap + text + wrap;
+  editor.executeEdits('markdown-format', [{
+    range: selection,
+    text: newText,
+  }]);
+  if (!selectedText) {
+    // Select the placeholder text
+    const startCol = selection.startColumn + wrap.length;
+    editor.setSelection({
+      startLineNumber: selection.startLineNumber,
+      startColumn: startCol,
+      endLineNumber: selection.startLineNumber,
+      endColumn: startCol + placeholder.length,
+    });
+  }
+}
+
+function prefixLines(editor, selection, selectedText, prefix, placeholder) {
+  if (!selectedText) {
+    editor.executeEdits('markdown-format', [{
+      range: selection,
+      text: prefix + placeholder,
+    }]);
+    return;
+  }
+  const lines = selectedText.split('\n');
+  const prefixed = lines.map(line => prefix + line).join('\n');
+  editor.executeEdits('markdown-format', [{
+    range: selection,
+    text: prefixed,
+  }]);
+}
+
+function insertAround(editor, selection, selectedText, spec) {
+  const text = selectedText || spec.placeholder;
+  const newText = spec.before + text + spec.after;
+  editor.executeEdits('markdown-format', [{
+    range: selection,
+    text: newText,
+  }]);
+  if (spec.cursorTarget) {
+    // Place cursor on the target placeholder (e.g., "url" in [text](url))
+    const fullText = spec.before + text + spec.after;
+    const targetStart = fullText.indexOf(spec.cursorTarget);
+    if (targetStart >= 0) {
+      const col = selection.startColumn + targetStart;
+      editor.setSelection({
+        startLineNumber: selection.startLineNumber,
+        startColumn: col,
+        endLineNumber: selection.startLineNumber,
+        endColumn: col + spec.cursorTarget.length,
+      });
+    }
+  }
+}
+
+function formatMarkdown(action, editor) {
+  const spec = MARKDOWN_ACTIONS[action];
+  if (!spec || !editor) return;
+
+  const selection = editor.getSelection();
+  const selectedText = editor.getModel().getValueInRange(selection);
+
+  if (spec.wrap) {
+    wrapSelection(editor, selection, selectedText, spec.wrap, spec.placeholder);
+  } else if (spec.linePrefix) {
+    prefixLines(editor, selection, selectedText, spec.linePrefix, spec.placeholder);
+  } else if (spec.before) {
+    insertAround(editor, selection, selectedText, spec);
+  }
+
+  editor.focus();
+}
+
+// Formatting toolbar click handler
+document.getElementById('markdown-format-toolbar').addEventListener('click', (e) => {
+  const btn = e.target.closest('.mft-btn');
+  if (!btn) return;
+  formatMarkdown(btn.dataset.mdAction, editorManager.getActiveEditor());
+});
+
 // ── Tab ↔ Editor Wiring ──
 
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
-  if (tab && tab.isLargeFile) {
+  if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
+    // Markdown read mode: deactivate previous tab manually, then render preview
+    // We can't call editorManager.activateTab() because it would create an editor
+    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
+      const current = editorManager.editors.get(editorManager.activeTabId);
+      if (current.isDiffTab) {
+        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
+      } else if (current.editor) {
+        current.viewState = current.editor.saveViewState();
+        current.editor.dispose();
+        current.editor = null;
+      }
+    }
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const entry = editorManager.editors.get(tabId);
+    if (entry) {
+      const content = entry.model.getValue();
+      markdownPreview.render(content, tab.filePath);
+    }
+    statusBar.updateLanguage('Markdown (Read)');
+    updateMarkdownToolbar(true, 'read');
+  } else if (tab && tab.isLargeFile) {
     // Show large file viewer
     editorContainer.innerHTML = '';
     const viewer = largeFileViewers.get(tabId);
@@ -306,6 +496,7 @@ tabManager.onActivate((tabId) => {
       editorContainer.appendChild(viewer.container);
     }
     statusBar.updateLanguage('Large File');
+    updateMarkdownToolbar(false);
   } else if (tab && tab.isHistoryTab) {
     const entry = editorManager.editors.get(tabId);
     if (entry) {
@@ -314,13 +505,21 @@ tabManager.onActivate((tabId) => {
       gitHistoryPanel._render(tabId, entry.filePath, entry.commits, entry.dirPath, entry.filename);
     }
     statusBar.updateLanguage('Git History');
+    updateMarkdownToolbar(false);
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
+    updateMarkdownToolbar(false);
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
     statusBar.updateLanguage(langInfo.displayName);
+    // Show markdown toolbar if this is a .md file in edit mode
+    if (tab && tab.isMarkdown) {
+      updateMarkdownToolbar(true, 'edit');
+    } else {
+      updateMarkdownToolbar(false);
+    }
   }
 
   if (tab) {
@@ -335,6 +534,11 @@ tabManager.onClose((tabId) => {
   const tab = tabManager.getTab(tabId);
   if (tab && tab.filePath) {
     window.api.unwatchFile(tab.filePath);
+  }
+
+  // Clean up markdown preview if active
+  if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
+    markdownPreview.destroy();
   }
 
   // Clean up history tab
@@ -483,11 +687,22 @@ async function openFileByPath(filePath, lineNumber) {
   const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
   tabManager.setFilePath(tabId, file.filePath);
   const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
-  editorManager.activateTab(tabId);
+
+  // Detect markdown files — default to read mode
+  if (isMarkdownFile(filename)) {
+    const tab = tabManager.getTab(tabId);
+    tab.isMarkdown = true;
+    tab.markdownMode = 'read';
+  }
+
+  tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  statusBar.updateLanguage(langInfo.displayName);
+  // Language display is set by onActivate for markdown, but keep for non-md
+  if (!isMarkdownFile(filename)) {
+    statusBar.updateLanguage(langInfo.displayName);
+  }
 
   if (lineNumber) editorManager.revealLine(tabId, lineNumber);
 }
@@ -523,11 +738,21 @@ async function openFile() {
     const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
     tabManager.setFilePath(tabId, file.filePath);
     const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
-    editorManager.activateTab(tabId);
+
+    // Detect markdown files — default to read mode
+    if (isMarkdownFile(filename)) {
+      const tab = tabManager.getTab(tabId);
+      tab.isMarkdown = true;
+      tab.markdownMode = 'read';
+    }
+
+    tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
     statusBar.updateLineEnding(file.lineEnding || 'LF');
     statusBar.updateEncoding(file.encoding || 'UTF-8');
-    statusBar.updateLanguage(langInfo.displayName);
+    if (!isMarkdownFile(filename)) {
+      statusBar.updateLanguage(langInfo.displayName);
+    }
   }
 }
 
@@ -578,8 +803,24 @@ async function saveFileAs() {
     tabManager.setTitle(tabId, filename);
     tabManager.setDirty(tabId, false);
 
-    const langInfo = editorManager.getLanguageInfo(tabId);
-    statusBar.updateLanguage(langInfo.displayName);
+    // Handle Save As to .md — transition to markdown mode
+    if (isMarkdownFile(filename) && !tab.isMarkdown) {
+      tab.isMarkdown = true;
+      tab.markdownMode = 'edit'; // Stay in edit mode after Save As
+      updateMarkdownToolbar(true, 'edit');
+      statusBar.updateLanguage('Markdown (Edit)');
+    } else if (!isMarkdownFile(filename) && tab.isMarkdown) {
+      // Was .md, saved as something else — remove markdown mode
+      tab.isMarkdown = false;
+      delete tab.markdownMode;
+      updateMarkdownToolbar(false);
+      const langInfo = editorManager.getLanguageInfo(tabId);
+      statusBar.updateLanguage(langInfo.displayName);
+    } else {
+      const langInfo = editorManager.getLanguageInfo(tabId);
+      statusBar.updateLanguage(langInfo.displayName);
+    }
+
     window.api.notifyActiveFile(result.filePath);
     refreshGitStatus();
     return true;
@@ -711,6 +952,11 @@ window.api.onFileChanged(async (filePath) => {
     if (file) {
       editorManager.setContent(tabId, file.content);
       tabManager.setDirty(tabId, false);
+      // Re-render markdown preview if in read mode
+      if (tab.isMarkdown && tab.markdownMode === 'read' && tabId === tabManager.getActiveTabId()) {
+        const entry = editorManager.editors.get(tabId);
+        if (entry) markdownPreview.render(entry.model.getValue(), tab.filePath);
+      }
     }
   }
 });
@@ -741,6 +987,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-push': gitPush(); break;
     case 'git-pull': gitPull(); break;
     case 'git-history': showGitFileHistory(); break;
+    case 'markdown-toggle': toggleMarkdownMode(); break;
   }
 });
 
@@ -775,6 +1022,15 @@ window.api.onMenuCompareTabs(() => {
   compareTabDialog.show(tabManager.getAllTabs(), tabManager.getActiveTabId());
 });
 window.api.onMenuGitHistory(() => showGitFileHistory());
+
+// ── Markdown Keyboard Shortcut (Ctrl+Shift+M) ──
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
+    e.preventDefault();
+    toggleMarkdownMode();
+  }
+});
 
 // ── Window Close Flow (main asks renderer for dirty tabs / to save) ──
 

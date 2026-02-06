@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, protocol, net, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
@@ -129,7 +129,21 @@ nativeTheme.on('updated', () => {
   }
 });
 
-app.whenReady().then(createWindow);
+// ── Custom Protocol for Markdown Preview Images ──
+// Scoped protocol so only markdown preview can load local images (not global file: access)
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'local-image',
+  privileges: { bypassCSP: false, supportFetchAPI: true, standard: false },
+}]);
+
+app.whenReady().then(() => {
+  protocol.handle('local-image', (request) => {
+    const filePath = decodeURIComponent(request.url.replace('local-image://', ''));
+    return net.fetch('file://' + filePath);
+  });
+
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -141,6 +155,15 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// ── Open External URLs ──
+
+ipcMain.handle('renderer:open-external', async (_event, url) => {
+  if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
+    await shell.openExternal(url);
+  }
+  return { success: true };
 });
 
 // ── Recent Files ──
