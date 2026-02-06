@@ -1,4 +1,4 @@
-import { createEditor, detectLanguage, getLanguageDisplayName, monaco } from './monaco-setup';
+import { createEditor, createDiffEditor, detectLanguage, getLanguageDisplayName, monaco } from './monaco-setup';
 
 /**
  * Manages multiple Monaco editor instances, one per tab.
@@ -11,6 +11,8 @@ export class EditorManager {
     this.activeTabId = null;
     this.onChangeCallbacks = [];
     this.onCursorCallbacks = [];
+    this.onClipboardCopyCallbacks = [];
+    this.onShowClipboardHistoryCallbacks = [];
     this.columnSelectionMode = false;
   }
 
@@ -30,11 +32,32 @@ export class EditorManager {
     return { language, displayName: getLanguageDisplayName(language) };
   }
 
+  createDiffTab(tabId, originalContent, modifiedContent, originalName, modifiedName) {
+    const origLang = detectLanguage(originalName);
+    const modLang = detectLanguage(modifiedName);
+    const originalModel = monaco.editor.createModel(originalContent, origLang);
+    const modifiedModel = monaco.editor.createModel(modifiedContent, modLang);
+
+    this.editors.set(tabId, {
+      isDiffTab: true,
+      originalModel,
+      modifiedModel,
+      diffEditor: null,
+      language: 'diff',
+      filename: `${originalName} ↔ ${modifiedName}`,
+    });
+  }
+
   activateTab(tabId) {
     // Save current editor state
     if (this.activeTabId && this.editors.has(this.activeTabId)) {
       const current = this.editors.get(this.activeTabId);
-      if (current.editor) {
+      if (current.isDiffTab) {
+        if (current.diffEditor) {
+          current.diffEditor.dispose();
+          current.diffEditor = null;
+        }
+      } else if (current.editor) {
         current.viewState = current.editor.saveViewState();
         current.editor.dispose();
         current.editor = null;
@@ -47,6 +70,19 @@ export class EditorManager {
     const entry = this.editors.get(tabId);
     if (!entry) return;
 
+    this.activeTabId = tabId;
+
+    // Branch: diff tab vs regular tab
+    if (entry.isDiffTab) {
+      const diffEditor = createDiffEditor(this.container);
+      diffEditor.setModel({
+        original: entry.originalModel,
+        modified: entry.modifiedModel,
+      });
+      entry.diffEditor = diffEditor;
+      return;
+    }
+
     // Create editor for the new active tab
     const editor = createEditor(this.container, {
       model: entry.model,
@@ -57,7 +93,6 @@ export class EditorManager {
     }
 
     entry.editor = editor;
-    this.activeTabId = tabId;
 
     // Dispose previous model content listener to prevent accumulation
     if (entry.contentDisposable) {
@@ -72,6 +107,8 @@ export class EditorManager {
       const selection = editor.getSelection();
       this.onCursorCallbacks.forEach(cb => cb(tabId, position, selection));
     });
+
+    this._registerClipboardActions(editor, tabId);
 
     editor.focus();
   }
@@ -100,11 +137,17 @@ export class EditorManager {
   closeTab(tabId) {
     const entry = this.editors.get(tabId);
     if (!entry) return;
-    if (entry.contentDisposable) entry.contentDisposable.dispose();
-    if (entry.editor) {
-      entry.editor.dispose();
+
+    if (entry.isDiffTab) {
+      if (entry.diffEditor) entry.diffEditor.dispose();
+      entry.originalModel.dispose();
+      entry.modifiedModel.dispose();
+    } else {
+      if (entry.contentDisposable) entry.contentDisposable.dispose();
+      if (entry.editor) entry.editor.dispose();
+      entry.model.dispose();
     }
-    entry.model.dispose();
+
     this.editors.delete(tabId);
     if (this.activeTabId === tabId) {
       this.activeTabId = null;
@@ -114,7 +157,11 @@ export class EditorManager {
   getActiveEditor() {
     if (!this.activeTabId) return null;
     const entry = this.editors.get(this.activeTabId);
-    return entry ? entry.editor : null;
+    if (!entry) return null;
+    if (entry.isDiffTab) {
+      return entry.diffEditor ? entry.diffEditor.getModifiedEditor() : null;
+    }
+    return entry.editor;
   }
 
   onChange(callback) {
@@ -123,6 +170,66 @@ export class EditorManager {
 
   onCursorChange(callback) {
     this.onCursorCallbacks.push(callback);
+  }
+
+  onClipboardCopy(callback) {
+    this.onClipboardCopyCallbacks.push(callback);
+  }
+
+  onShowClipboardHistory(callback) {
+    this.onShowClipboardHistoryCallbacks.push(callback);
+  }
+
+  _registerClipboardActions(editor, tabId) {
+    // Override Ctrl/Cmd+C — copy text and notify clipboard ring
+    editor.addAction({
+      id: 'clipboard-ring-copy',
+      label: 'Copy to Clipboard Ring',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
+      run: (ed) => {
+        const selection = ed.getSelection();
+        let text = ed.getModel().getValueInRange(selection);
+        if (!text) {
+          // No selection — copy entire line (Monaco default behavior)
+          const lineNumber = ed.getPosition().lineNumber;
+          text = ed.getModel().getLineContent(lineNumber);
+        }
+        // Trigger native copy
+        ed.trigger('keyboard', 'editor.action.clipboardCopyAction', null);
+        if (text) {
+          this.onClipboardCopyCallbacks.forEach(cb => cb(text, tabId));
+        }
+      },
+    });
+
+    // Override Ctrl/Cmd+X — cut text and notify clipboard ring
+    editor.addAction({
+      id: 'clipboard-ring-cut',
+      label: 'Cut to Clipboard Ring',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
+      run: (ed) => {
+        const selection = ed.getSelection();
+        let text = ed.getModel().getValueInRange(selection);
+        if (!text) {
+          const lineNumber = ed.getPosition().lineNumber;
+          text = ed.getModel().getLineContent(lineNumber);
+        }
+        ed.trigger('keyboard', 'editor.action.clipboardCutAction', null);
+        if (text) {
+          this.onClipboardCopyCallbacks.forEach(cb => cb(text, tabId));
+        }
+      },
+    });
+
+    // Ctrl/Cmd+Shift+V — open clipboard history
+    editor.addAction({
+      id: 'clipboard-ring-show',
+      label: 'Show Clipboard History',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV],
+      run: () => {
+        this.onShowClipboardHistoryCallbacks.forEach(cb => cb());
+      },
+    });
   }
 
   toggleWordWrap() {

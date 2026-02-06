@@ -84,4 +84,14 @@ contextBridge.exposeInMainWorld('api', {
   onMenuFindInFiles: (callback) => ipcRenderer.on('main:find-in-files', callback),
   onMenuToggleColumnSelection: (callback) => ipcRenderer.on('main:toggle-column-selection', callback),
   onMenuGoToLine: (callback) => ipcRenderer.on('main:go-to-line', callback),
+  onMenuShowRecentFiles: (callback) => ipcRenderer.on('main:show-recent-files', callback),
+
+  // Clipboard ring
+  addClipboardEntry: (text, source) => ipcRenderer.invoke('renderer:clipboard-add', { text, source }),
+  getClipboardRing: () => ipcRenderer.invoke('renderer:get-clipboard-ring'),
+  clearClipboardRing: () => ipcRenderer.invoke('renderer:clear-clipboard-ring'),
+  onMenuClipboardHistory: (callback) => ipcRenderer.on('main:clipboard-history', callback),
+
+  // Compare/diff
+  onMenuCompareTabs: (callback) => ipcRenderer.on('main:compare-tabs', callback),
 });

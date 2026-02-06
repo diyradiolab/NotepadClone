@@ -3,12 +3,18 @@ import './styles/notepadpp-theme.css';
 import './styles/file-explorer.css';
 import './styles/find-in-files.css';
 import './styles/large-file-viewer.css';
+import './styles/recent-files-dialog.css';
+import './styles/clipboard-history-dialog.css';
+import './styles/compare-dialog.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
 import { FileExplorer } from './components/file-explorer';
 import { FindInFiles } from './components/find-in-files';
 import { LargeFileViewer } from './editor/large-file-viewer';
+import { RecentFilesDialog } from './components/recent-files-dialog';
+import { ClipboardHistoryDialog } from './components/clipboard-history-dialog';
+import { CompareTabDialog } from './components/compare-tab-dialog';
 import { setEditorTheme } from './editor/monaco-setup';
 
 // ── Initialize Components ──
@@ -22,6 +28,42 @@ const tabManager = new TabManager(tabBar);
 const statusBar = new StatusBar();
 const fileExplorer = new FileExplorer(explorerContainer);
 const findInFiles = new FindInFiles(fifContainer);
+const recentFilesDialog = new RecentFilesDialog();
+const clipboardHistoryDialog = new ClipboardHistoryDialog();
+const compareTabDialog = new CompareTabDialog();
+
+recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
+
+compareTabDialog.onSelect((otherTabId) => {
+  const activeTabId = tabManager.getActiveTabId();
+  if (!activeTabId) return;
+  const activeTab = tabManager.getTab(activeTabId);
+  const otherTab = tabManager.getTab(otherTabId);
+  if (!activeTab || !otherTab) return;
+
+  const activeContent = editorManager.getContent(activeTabId);
+  const otherContent = editorManager.getContent(otherTabId);
+
+  const diffTitle = `${activeTab.title} ↔ ${otherTab.title}`;
+  const diffTabId = tabManager.createTab(diffTitle);
+  const diffTab = tabManager.getTab(diffTabId);
+  diffTab.isDiffTab = true;
+
+  editorManager.createDiffTab(diffTabId, otherContent, activeContent, otherTab.title, activeTab.title);
+  editorManager.activateTab(diffTabId);
+  statusBar.updateLanguage('Diff');
+});
+
+clipboardHistoryDialog.onPaste((text) => {
+  const editor = editorManager.getActiveEditor();
+  if (!editor) return;
+  const selection = editor.getSelection();
+  editor.executeEdits('clipboard-ring', [{
+    range: selection,
+    text,
+  }]);
+  editor.focus();
+});
 
 // Track large file viewers per tab
 const largeFileViewers = new Map(); // tabId → LargeFileViewer
@@ -76,6 +118,9 @@ tabManager.onActivate((tabId) => {
       editorContainer.appendChild(viewer.container);
     }
     statusBar.updateLanguage('Large File');
+  } else if (tab && tab.isDiffTab) {
+    editorManager.activateTab(tabId);
+    statusBar.updateLanguage('Diff');
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
@@ -123,6 +168,15 @@ editorManager.onCursorChange((tabId, position, selection) => {
     statusBar.updatePosition(position.lineNumber, position.column);
     statusBar.updateSelection(selection);
   }
+});
+
+editorManager.onClipboardCopy((text, tabId) => {
+  const tab = tabManager.getTab(tabId);
+  window.api.addClipboardEntry(text, tab ? tab.title : 'Unknown');
+});
+
+editorManager.onShowClipboardHistory(() => {
+  clipboardHistoryDialog.show();
 });
 
 // ── Open a large file ──
@@ -493,6 +547,11 @@ window.api.onMenuZoomOut(() => editorManager.zoomOut());
 window.api.onMenuResetZoom(() => editorManager.resetZoom());
 window.api.onMenuOpenRecent((filePath) => openFileByPath(filePath));
 window.api.onMenuGoToLine(() => showGoToLineDialog());
+window.api.onMenuShowRecentFiles(() => recentFilesDialog.show());
+window.api.onMenuClipboardHistory(() => clipboardHistoryDialog.show());
+window.api.onMenuCompareTabs(() => {
+  compareTabDialog.show(tabManager.getAllTabs(), tabManager.getActiveTabId());
+});
 
 // ── Window Close Flow (main asks renderer for dirty tabs / to save) ──
 

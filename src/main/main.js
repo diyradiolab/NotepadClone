@@ -23,6 +23,7 @@ const largeFileManager = new LargeFileManager();
 const store = new Store({
   defaults: {
     recentFiles: [],
+    clipboardRing: [],
     windowBounds: { width: 1200, height: 800 },
     theme: 'system',
   },
@@ -147,9 +148,23 @@ function addRecentFile(filePath) {
   let recent = store.get('recentFiles', []);
   recent = recent.filter(f => f !== filePath);
   recent.unshift(filePath);
-  if (recent.length > 15) recent = recent.slice(0, 15);
+  if (recent.length > 100) recent = recent.slice(0, 100);
   store.set('recentFiles', recent);
   buildMenu(mainWindow, store, currentFilePath);
+}
+
+// ── Clipboard Ring ──
+
+const MAX_CLIPBOARD_ENTRY_SIZE = 100 * 1024; // 100KB per entry
+
+function addClipboardEntry(text, source) {
+  if (!text || text.length > MAX_CLIPBOARD_ENTRY_SIZE) return;
+  let ring = store.get('clipboardRing', []);
+  // Deduplicate: remove existing entry with same text
+  ring = ring.filter(entry => entry.text !== text);
+  ring.unshift({ text, timestamp: Date.now(), source: source || 'Unknown' });
+  if (ring.length > 100) ring = ring.slice(0, 100);
+  store.set('clipboardRing', ring);
 }
 
 // ── File Watching ──
@@ -329,6 +344,22 @@ ipcMain.handle('renderer:get-recent-files', async () => {
 ipcMain.handle('renderer:clear-recent-files', async () => {
   store.set('recentFiles', []);
   buildMenu(mainWindow, store, currentFilePath);
+  return { success: true };
+});
+
+// ── Clipboard Ring ──
+
+ipcMain.handle('renderer:clipboard-add', async (_event, { text, source }) => {
+  addClipboardEntry(text, source);
+  return { success: true };
+});
+
+ipcMain.handle('renderer:get-clipboard-ring', async () => {
+  return store.get('clipboardRing', []);
+});
+
+ipcMain.handle('renderer:clear-clipboard-ring', async () => {
+  store.set('clipboardRing', []);
   return { success: true };
 });
 

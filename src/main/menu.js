@@ -1,17 +1,25 @@
 const { Menu } = require('electron');
+const path = require('path');
 
 function buildMenu(mainWindow, store, currentFilePath) {
   const isMac = process.platform === 'darwin';
   const currentTheme = store ? store.get('theme', 'system') : 'system';
 
-  // Build recent files submenu
+  // Build recent files submenu — show top 5 for quick access, then "Show All..."
   const recentFiles = store ? store.get('recentFiles', []) : [];
   const recentSubmenu = recentFiles.length > 0
     ? [
-        ...recentFiles.map(filePath => ({
-          label: filePath,
+        ...recentFiles.slice(0, 5).map(filePath => ({
+          label: path.basename(filePath),
+          sublabel: filePath,
           click: () => mainWindow.webContents.send('main:open-recent', filePath),
         })),
+        { type: 'separator' },
+        {
+          label: 'Show All Recent Files...',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => mainWindow.webContents.send('main:show-recent-files'),
+        },
         { type: 'separator' },
         {
           label: 'Clear Recent Files',
@@ -96,6 +104,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
         { role: 'copy' },
         { role: 'paste' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        {
+          label: 'Clipboard History...',
+          accelerator: 'CmdOrCtrl+Shift+V',
+          click: () => mainWindow.webContents.send('main:clipboard-history'),
+        },
       ],
     },
 
@@ -130,6 +144,17 @@ function buildMenu(mainWindow, store, currentFilePath) {
           label: 'Column Selection Mode',
           accelerator: 'Alt+Shift+C',
           click: () => mainWindow.webContents.send('main:toggle-column-selection'),
+        },
+      ],
+    },
+
+    // Tools menu
+    {
+      label: '&Tools',
+      submenu: [
+        {
+          label: 'Compare Active Tab With...',
+          click: () => mainWindow.webContents.send('main:compare-tabs'),
         },
       ],
     },

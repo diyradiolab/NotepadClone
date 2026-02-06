@@ -113,6 +113,17 @@ export function createEditor(container, options = {}) {
   return monaco.editor.create(container, editorOptions);
 }
 
+export function createDiffEditor(container, options = {}) {
+  return monaco.editor.createDiffEditor(container, {
+    ...DEFAULT_OPTIONS,
+    theme: currentTheme,
+    readOnly: true,
+    renderSideBySide: true,
+    enableSplitViewResizing: true,
+    ...options,
+  });
+}
+
 export function detectLanguage(filename) {
   if (!filename) return 'plaintext';
   const ext = filename.split('.').pop().toLowerCase();
