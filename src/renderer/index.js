@@ -7,6 +7,7 @@ import './styles/recent-files-dialog.css';
 import './styles/clipboard-history-dialog.css';
 import './styles/compare-dialog.css';
 import './styles/git-commit-dialog.css';
+import './styles/sql-query-panel.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -17,6 +18,7 @@ import { RecentFilesDialog } from './components/recent-files-dialog';
 import { ClipboardHistoryDialog } from './components/clipboard-history-dialog';
 import { CompareTabDialog } from './components/compare-tab-dialog';
 import { GitCommitDialog } from './components/git-commit-dialog';
+import { SqlQueryPanel } from './components/sql-query-panel';
 import { setEditorTheme } from './editor/monaco-setup';
 
 // ── Initialize Components ──
@@ -30,12 +32,20 @@ const tabManager = new TabManager(tabBar);
 const statusBar = new StatusBar();
 const fileExplorer = new FileExplorer(explorerContainer);
 const findInFiles = new FindInFiles(fifContainer);
+const sqlQueryPanel = new SqlQueryPanel(
+  document.getElementById('sql-query'), editorManager, tabManager
+);
 const recentFilesDialog = new RecentFilesDialog();
 const clipboardHistoryDialog = new ClipboardHistoryDialog();
 const compareTabDialog = new CompareTabDialog();
 const gitCommitDialog = new GitCommitDialog();
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
+
+sqlQueryPanel.onRowClick((lineNumber) => {
+  const tabId = tabManager.getActiveTabId();
+  if (tabId) editorManager.revealLine(tabId, lineNumber);
+});
 
 compareTabDialog.onSelect((otherTabId) => {
   const activeTabId = tabManager.getActiveTabId();
@@ -645,6 +655,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'find-in-files': findInFiles.toggle(); break;
     case 'word-wrap': editorManager.toggleWordWrap(); break;
     case 'column-select': toggleColumnSelection(); break;
+    case 'sql-query': sqlQueryPanel.toggle(); break;
     case 'git-init': gitInit(); break;
     case 'git-stage': gitStageAll(); break;
     case 'git-commit': gitCommitOpen(); break;
@@ -679,6 +690,7 @@ window.api.onMenuOpenRecent((filePath) => openFileByPath(filePath));
 window.api.onMenuGoToLine(() => showGoToLineDialog());
 window.api.onMenuShowRecentFiles(() => recentFilesDialog.show());
 window.api.onMenuClipboardHistory(() => clipboardHistoryDialog.show());
+window.api.onMenuSqlQuery(() => sqlQueryPanel.toggle());
 window.api.onMenuCompareTabs(() => {
   compareTabDialog.show(tabManager.getAllTabs(), tabManager.getActiveTabId());
 });

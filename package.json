@@ -115,6 +115,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "alasql": "^4.17.0",
     "chardet": "^2.1.1",
     "chokidar": "^3.6.0",
     "electron-store": "^8.2.0",

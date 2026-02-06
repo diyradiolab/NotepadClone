@@ -1,0 +1,216 @@
+/* ── SQL Query Panel ── */
+.sql-query {
+  height: 300px;
+  min-height: 120px;
+  max-height: 50vh;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sql-query.hidden {
+  display: none;
+}
+
+.sqp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.sqp-close-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-secondary);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sqp-close-btn:hover {
+  background: var(--tab-close-hover-bg);
+  color: white;
+}
+
+.sqp-options-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.sqp-options-bar label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sqp-delimiter-select {
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.sqp-delimiter-select:focus {
+  border-color: var(--input-border-focus);
+}
+
+.sqp-custom-regex {
+  width: 80px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.sqp-custom-regex:focus {
+  border-color: var(--input-border-focus);
+}
+
+.sqp-query-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.sqp-textarea {
+  flex: 1;
+  min-height: 28px;
+  max-height: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.sqp-textarea:focus {
+  border-color: var(--input-border-focus);
+}
+
+.sqp-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sqp-run-btn,
+.sqp-export-btn {
+  height: 24px;
+  padding: 0 12px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sqp-run-btn:hover,
+.sqp-export-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.sqp-export-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sqp-status {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.sqp-status.sqp-status-error {
+  color: #e04040;
+}
+
+.sqp-results {
+  flex: 1;
+  overflow: auto;
+}
+
+.sqp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.sqp-table th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  border-right: 1px solid var(--border-secondary);
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.sqp-table td {
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--border-secondary);
+  border-right: 1px solid var(--border-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sqp-table tr.sqp-clickable {
+  cursor: pointer;
+}
+
+.sqp-table tr.sqp-clickable:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.sqp-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}

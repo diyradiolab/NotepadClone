@@ -95,6 +95,9 @@ contextBridge.exposeInMainWorld('api', {
   // Compare/diff
   onMenuCompareTabs: (callback) => ipcRenderer.on('main:compare-tabs', callback),
 
+  // SQL Query
+  onMenuSqlQuery: (callback) => ipcRenderer.on('main:sql-query', callback),
+
   // Git operations
   gitStatus: (dirPath) => ipcRenderer.invoke('renderer:git-status', dirPath),
   gitInit: (dirPath) => ipcRenderer.invoke('renderer:git-init', dirPath),

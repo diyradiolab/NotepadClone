@@ -156,6 +156,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
           label: 'Compare Active Tab With...',
           click: () => mainWindow.webContents.send('main:compare-tabs'),
         },
+        { type: 'separator' },
+        {
+          label: 'SQL Query...',
+          accelerator: 'CmdOrCtrl+Shift+Q',
+          click: () => mainWindow.webContents.send('main:sql-query'),
+        },
       ],
     },
 
