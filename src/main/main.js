@@ -1,6 +1,17 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
+
+// macOS: disable press-and-hold accent picker so keys repeat (essential for code editors)
+if (process.platform === 'darwin') {
+  try {
+    execSync('defaults write com.notepadclone.app ApplePressAndHoldEnabled -bool false');
+    if (!app.isPackaged) {
+      execSync('defaults write com.github.Electron ApplePressAndHoldEnabled -bool false');
+    }
+  } catch (_) { /* ignore */ }
+}
 const chokidar = require('chokidar');
 const Store = require('electron-store');
 const { buildMenu } = require('./menu');
