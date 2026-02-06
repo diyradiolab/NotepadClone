@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { EventEmitter } = require('events');
 
 const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
 

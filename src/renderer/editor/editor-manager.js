@@ -59,8 +59,11 @@ export class EditorManager {
     entry.editor = editor;
     this.activeTabId = tabId;
 
-    // Wire up change listeners
-    entry.model.onDidChangeContent(() => {
+    // Dispose previous model content listener to prevent accumulation
+    if (entry.contentDisposable) {
+      entry.contentDisposable.dispose();
+    }
+    entry.contentDisposable = entry.model.onDidChangeContent(() => {
       this.onChangeCallbacks.forEach(cb => cb(tabId));
     });
 
@@ -97,6 +100,7 @@ export class EditorManager {
   closeTab(tabId) {
     const entry = this.editors.get(tabId);
     if (!entry) return;
+    if (entry.contentDisposable) entry.contentDisposable.dispose();
     if (entry.editor) {
       entry.editor.dispose();
     }

@@ -66,14 +66,14 @@ function createWindow() {
     fileWatchers.clear();
     mainWindow = null;
   });
-
-  // Listen for OS theme changes and forward to renderer
-  nativeTheme.on('updated', () => {
-    if (mainWindow && store.get('theme') === 'system') {
-      mainWindow.webContents.send('main:theme-changed', 'system');
-    }
-  });
 }
+
+// Listen for OS theme changes and forward to renderer (registered once at module level)
+nativeTheme.on('updated', () => {
+  if (mainWindow && store.get('theme') === 'system') {
+    mainWindow.webContents.send('main:theme-changed', 'system');
+  }
+});
 
 app.whenReady().then(createWindow);
 

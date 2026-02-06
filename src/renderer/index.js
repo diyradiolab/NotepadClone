@@ -157,7 +157,7 @@ async function openLargeFile(filePath, fileSize) {
     }
   });
 
-  // Show loading state
+  // Show loading state (viewer defers _render to init(), so this is safe)
   editorContainer.innerHTML = '';
   editorContainer.appendChild(viewerContainer);
   viewerContainer.innerHTML = `
@@ -176,14 +176,7 @@ async function openLargeFile(filePath, fileSize) {
     return;
   }
 
-  // Initialize the viewer
-  viewer._render();
-  viewer._bindEvents();
-  viewer.onCursorChange((line, col) => {
-    if (tabId === tabManager.getActiveTabId()) {
-      statusBar.updatePosition(line, col);
-    }
-  });
+  // Initialize the viewer (init calls _render and _bindEvents internally)
   await viewer.init(filePath, result.totalLines, result.fileSize);
 
   const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);

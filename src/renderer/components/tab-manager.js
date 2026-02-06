@@ -46,8 +46,8 @@ export class TabManager {
     const el = this.tabBar.querySelector(`[data-tab-id="${tabId}"]`);
     if (el) el.remove();
 
-    this.tabs.delete(tabId);
     this.onCloseCallbacks.forEach(cb => cb(tabId));
+    this.tabs.delete(tabId);
 
     if (this.activeTabId === tabId) {
       const remaining = [...this.tabs.keys()];

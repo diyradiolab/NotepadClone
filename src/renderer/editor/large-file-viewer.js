@@ -16,9 +16,7 @@ export class LargeFileViewer {
     this.fetchingRange = null;
 
     this.onCursorCallbacks = [];
-
-    this._render();
-    this._bindEvents();
+    this._boundScrollHandler = null;
   }
 
   _render() {
@@ -41,9 +39,8 @@ export class LargeFileViewer {
   }
 
   _bindEvents() {
-    this.scrollContainer.addEventListener('scroll', () => {
-      this._onScroll();
-    });
+    this._boundScrollHandler = () => this._onScroll();
+    this.scrollContainer.addEventListener('scroll', this._boundScrollHandler);
   }
 
   async init(filePath, totalLines, fileSize) {
@@ -51,6 +48,9 @@ export class LargeFileViewer {
     this.totalLines = totalLines;
     this.fileSize = fileSize;
     this.lineCache.clear();
+
+    this._render();
+    this._bindEvents();
 
     // Set total height to represent all lines
     const totalHeight = this.totalLines * this.lineHeight;
@@ -168,6 +168,10 @@ export class LargeFileViewer {
   }
 
   destroy() {
+    if (this.scrollContainer && this._boundScrollHandler) {
+      this.scrollContainer.removeEventListener('scroll', this._boundScrollHandler);
+    }
+    this.onCursorCallbacks = [];
     this.lineCache.clear();
     this.container.innerHTML = '';
   }
