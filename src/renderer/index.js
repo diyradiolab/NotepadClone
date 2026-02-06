@@ -324,6 +324,38 @@ async function saveFileAs() {
   return false;
 }
 
+// Save a specific tab by ID (used by save callback and window close flow)
+async function saveTab(tabId) {
+  const tab = tabManager.getTab(tabId);
+  if (!tab || tab.isLargeFile) return false;
+
+  const content = editorManager.getContent(tabId);
+
+  if (tab.filePath) {
+    const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
+    if (result.success) {
+      tabManager.setDirty(tabId, false);
+      return true;
+    }
+    statusBar.showMessage(`Save failed: ${result.error}`);
+    return false;
+  }
+
+  // No file path — need Save As
+  const result = await window.api.saveFileAs(content, tab.title, tab.encoding);
+  if (result) {
+    tabManager.setFilePath(tabId, result.filePath);
+    const filename = result.filePath.split(/[/\\]/).pop();
+    tabManager.setTitle(tabId, filename);
+    tabManager.setDirty(tabId, false);
+    return true;
+  }
+  return false;
+}
+
+// Register save callback so TabManager can save tabs during close
+tabManager.setSaveCallback(saveTab);
+
 function toggleColumnSelection() {
   const enabled = editorManager.toggleColumnSelection();
   const btn = document.getElementById('btn-column-select');
@@ -461,6 +493,23 @@ window.api.onMenuZoomOut(() => editorManager.zoomOut());
 window.api.onMenuResetZoom(() => editorManager.resetZoom());
 window.api.onMenuOpenRecent((filePath) => openFileByPath(filePath));
 window.api.onMenuGoToLine(() => showGoToLineDialog());
+
+// ── Window Close Flow (main asks renderer for dirty tabs / to save) ──
+
+window.api.onGetDirtyTabs(() => {
+  const dirtyTabs = [];
+  for (const [tabId, tab] of tabManager.getAllTabs()) {
+    if (tab.dirty) {
+      dirtyTabs.push({ tabId, title: tab.title, filePath: tab.filePath });
+    }
+  }
+  window.api.sendDirtyTabsResponse(dirtyTabs);
+});
+
+window.api.onSaveTab(async (tabId) => {
+  const saved = await saveTab(tabId);
+  window.api.sendSaveTabResponse(saved);
+});
 
 // ── Start with one blank tab ──
 newFile();

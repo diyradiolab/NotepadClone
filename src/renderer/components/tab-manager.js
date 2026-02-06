@@ -12,6 +12,7 @@ export class TabManager {
 
     this.onActivateCallbacks = [];
     this.onCloseCallbacks = [];
+    this.saveCallback = null;
 
     this._draggedTabId = null;
     this._initContextMenu();
@@ -40,14 +41,24 @@ export class TabManager {
     this.onActivateCallbacks.forEach(cb => cb(tabId));
   }
 
-  closeTab(tabId) {
+  async closeTab(tabId) {
     const tab = this.tabs.get(tabId);
-    if (!tab) return;
+    if (!tab) return false;
+
+    if (tab.dirty) {
+      const result = await window.api.showSaveDialog(tab.title);
+      if (result === 'cancel') return false;
+      if (result === 'save') {
+        const saved = await this.saveCallback?.(tabId);
+        if (!saved) return false;
+      }
+    }
+
+    this.onCloseCallbacks.forEach(cb => cb(tabId));
 
     const el = this.tabBar.querySelector(`[data-tab-id="${tabId}"]`);
     if (el) el.remove();
 
-    this.onCloseCallbacks.forEach(cb => cb(tabId));
     this.tabs.delete(tabId);
 
     if (this.activeTabId === tabId) {
@@ -58,24 +69,31 @@ export class TabManager {
         this.activeTabId = null;
       }
     }
+    return true;
   }
 
-  closeOtherTabs(tabId) {
+  async closeOtherTabs(tabId) {
     const toClose = [...this.tabs.keys()].filter(id => id !== tabId);
-    toClose.forEach(id => this.closeTab(id));
+    for (const id of toClose) {
+      if (!(await this.closeTab(id))) return;
+    }
   }
 
-  closeTabsToRight(tabId) {
+  async closeTabsToRight(tabId) {
     const tabIds = this._getTabOrder();
     const idx = tabIds.indexOf(tabId);
     if (idx < 0) return;
     const toClose = tabIds.slice(idx + 1);
-    toClose.forEach(id => this.closeTab(id));
+    for (const id of toClose) {
+      if (!(await this.closeTab(id))) return;
+    }
   }
 
-  closeAllTabs() {
+  async closeAllTabs() {
     const toClose = [...this.tabs.keys()];
-    toClose.forEach(id => this.closeTab(id));
+    for (const id of toClose) {
+      if (!(await this.closeTab(id))) return;
+    }
   }
 
   setDirty(tabId, dirty) {
@@ -108,6 +126,14 @@ export class TabManager {
 
   getTabCount() {
     return this.tabs.size;
+  }
+
+  setSaveCallback(fn) {
+    this.saveCallback = fn;
+  }
+
+  getAllTabs() {
+    return this.tabs;
   }
 
   findTabByPath(filePath) {

@@ -30,7 +30,25 @@ const store = new Store({
 
 let mainWindow = null;
 let currentFilePath = null; // track active file for Share menu
+let isClosing = false; // re-entrancy guard for window close handler
 const fileWatchers = new Map(); // filePath → chokidar watcher
+
+// Send a message to renderer and wait for a response on a paired channel (with timeout)
+function invokeRenderer(channel, ...args) {
+  return new Promise((resolve) => {
+    const responseChannel = `${channel}-response`;
+    const timeout = setTimeout(() => {
+      ipcMain.removeListener(responseChannel, handler);
+      resolve(null);
+    }, 5000);
+    const handler = (_event, result) => {
+      clearTimeout(timeout);
+      resolve(result);
+    };
+    ipcMain.once(responseChannel, handler);
+    mainWindow.webContents.send(channel, ...args);
+  });
+}
 
 function createWindow() {
   const { width, height } = store.get('windowBounds');
@@ -56,6 +74,40 @@ function createWindow() {
   mainWindow.on('resize', () => {
     const bounds = mainWindow.getBounds();
     store.set('windowBounds', { width: bounds.width, height: bounds.height });
+  });
+
+  mainWindow.on('close', async (event) => {
+    if (isClosing) return;
+    event.preventDefault();
+
+    isClosing = true;
+    try {
+      const dirtyTabs = await invokeRenderer('main:get-dirty-tabs');
+      if (!dirtyTabs || dirtyTabs.length === 0) {
+        mainWindow.destroy();
+        return;
+      }
+
+      for (const tab of dirtyTabs) {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Save Changes',
+          message: `Save changes to ${tab.title}?`,
+          buttons: ['Save', "Don't Save", 'Cancel'],
+          defaultId: 0,
+          cancelId: 2,
+        });
+        if (response === 0) { // Save
+          const saved = await invokeRenderer('main:save-tab', tab.tabId);
+          if (!saved) return; // save failed or timed out, abort close
+        } else if (response === 2) { // Cancel
+          return;
+        }
+      }
+      mainWindow.destroy();
+    } finally {
+      isClosing = false;
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -293,6 +345,20 @@ ipcMain.handle('renderer:set-theme', async (_event, theme) => {
   }
   buildMenu(mainWindow, store, currentFilePath);
   return { success: true };
+});
+
+// ── Save Dialog (renderer-driven, for tab close) ──
+
+ipcMain.handle('renderer:show-save-dialog', async (_event, fileName) => {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: 'Save Changes',
+    message: `Save changes to ${fileName}?`,
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+  });
+  return ['save', 'discard', 'cancel'][response];
 });
 
 // ── Find in Files ──
