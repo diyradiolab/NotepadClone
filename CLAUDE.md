@@ -30,3 +30,14 @@ Classic Notepad++ aesthetics, modern internals.
 - `monaco-editor` — code editor engine
 - `electron` — desktop shell
 - Webpack bundles the renderer; main process runs raw Node.js
+
+## Build Preferences
+- Always use `npx webpack --mode development` (~17s) unless production build is explicitly requested
+- Main process files (menu.js, preload.js, git-service.js) don't need webpack rebuild
+- Renderer changes (index.js, components, CSS) require webpack rebuild before launch
+
+## How I Want to Work
+- **Front-load requirements**: describe the full desired behavior in one message rather than revealing it across multiple rounds. Include visual details (colors, layout), interaction behavior, and edge cases up front.
+- **State behaviors, don't ask questions**: say "commit should auto-stage when nothing is staged" instead of "do I have to stage first?"
+- **Say what right looks like**: when something is wrong, describe the desired outcome, not just the complaint. "Show staged files separately from unstaged with status codes" beats "the dialog is wrong."
+- **Batch related changes**: if a feature needs an indicator, a tooltip, and a status bar entry, request all three together instead of one at a time.
