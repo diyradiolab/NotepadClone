@@ -124,8 +124,8 @@ function updateGitUI() {
   if (gitState.isRepo) {
     let tip = `Branch: ${gitState.branch}`;
     if (gitState.dirtyCount > 0 && gitState.changedFiles) {
-      tip += `\n${gitState.dirtyCount} changed:\n`;
-      tip += gitState.changedFiles.map(f => `  ${f.status} ${f.file}`).join('\n');
+      tip += `\n${gitState.dirtyCount} changed, ${gitState.stagedCount || 0} staged:\n`;
+      tip += gitState.changedFiles.map(f => `  ${f.staged ? '*' : ' '} ${f.status} ${f.file}`).join('\n');
     } else {
       tip += '\nWorking tree clean';
     }
@@ -202,8 +202,7 @@ async function gitStageFile() {
 }
 
 function gitCommitOpen() {
-  const summary = `${gitState.branch} — ${gitState.dirtyCount} file(s) changed`;
-  gitCommitDialog.show(summary);
+  gitCommitDialog.show(gitState);
 }
 
 gitCommitDialog.onCommit(async (message) => {

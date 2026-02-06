@@ -37,6 +37,7 @@ async function getStatus(cwd) {
   }
 
   let dirtyCount = 0;
+  let stagedCount = 0;
   let changedFiles = [];
   try {
     const porcelain = await runGit(['status', '--porcelain'], cwd);
@@ -44,9 +45,12 @@ async function getStatus(cwd) {
       const lines = porcelain.split('\n');
       dirtyCount = lines.length;
       changedFiles = lines.map(line => {
-        const status = line.substring(0, 2).trim();
+        const idx = line[0];   // index (staged) status
+        const wt = line[1];    // worktree status
         const file = line.substring(3);
-        return { status, file };
+        const staged = idx !== ' ' && idx !== '?';
+        if (staged) stagedCount++;
+        return { status: line.substring(0, 2).trim(), file, staged };
       });
     }
   } catch { /* ignore */ }
@@ -57,7 +61,7 @@ async function getStatus(cwd) {
     hasRemote = remotes.length > 0;
   } catch { /* ignore */ }
 
-  return { isRepo: true, branch, dirtyCount, changedFiles, hasRemote, repoRoot };
+  return { isRepo: true, branch, dirtyCount, stagedCount, changedFiles, hasRemote, repoRoot };
 }
 
 async function init(cwd) {

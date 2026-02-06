@@ -84,3 +84,41 @@
 .git-commit-footer button.primary:hover {
   opacity: 0.9;
 }
+
+.git-commit-files {
+  padding: 0 16px 8px;
+}
+
+.git-commit-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.git-commit-note-muted {
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.git-commit-file-list {
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.git-commit-file {
+  padding: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.git-commit-file-status {
+  display: inline-block;
+  width: 24px;
+  color: var(--text-accent);
+  font-weight: 600;
+}
