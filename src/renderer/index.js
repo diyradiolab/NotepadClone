@@ -497,6 +497,7 @@ async function saveFileAs() {
     const langInfo = editorManager.getLanguageInfo(tabId);
     statusBar.updateLanguage(langInfo.displayName);
     window.api.notifyActiveFile(result.filePath);
+    refreshGitStatus();
     return true;
   }
   return false;
