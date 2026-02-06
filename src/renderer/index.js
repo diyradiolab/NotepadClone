@@ -106,16 +106,28 @@ function getActiveFileDirPath() {
 }
 
 async function refreshGitStatus() {
-  const dirPath = getActiveFileDirPath();
+  const dirPath = getActiveFileDirPath() || currentFolderPath;
   gitState = await window.api.gitStatus(dirPath);
   updateGitUI();
 }
 
 function updateGitUI() {
-  const hasDirPath = !!getActiveFileDirPath();
+  const hasDirPath = !!(getActiveFileDirPath() || currentFolderPath);
 
-  // Indicator color
+  // Indicator color + tooltip
   gitIndicator.classList.toggle('git-active', gitState.isRepo);
+  if (gitState.isRepo) {
+    let tip = `Branch: ${gitState.branch}`;
+    if (gitState.dirtyCount > 0 && gitState.changedFiles) {
+      tip += `\n${gitState.dirtyCount} changed:\n`;
+      tip += gitState.changedFiles.map(f => `  ${f.status} ${f.file}`).join('\n');
+    } else {
+      tip += '\nWorking tree clean';
+    }
+    gitIndicator.title = tip;
+  } else {
+    gitIndicator.title = 'Git: not a repository';
+  }
 
   // Show/hide buttons
   gitInitBtn.style.display = (!gitState.isRepo && hasDirPath) ? '' : 'none';
@@ -463,6 +475,7 @@ async function openFolder() {
   await fileExplorer.openFolder();
   currentFolderPath = fileExplorer.rootPath;
   findInFiles.setSearchDir(currentFolderPath);
+  refreshGitStatus();
 }
 
 async function saveFile() {

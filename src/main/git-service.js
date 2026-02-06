@@ -37,10 +37,17 @@ async function getStatus(cwd) {
   }
 
   let dirtyCount = 0;
+  let changedFiles = [];
   try {
     const porcelain = await runGit(['status', '--porcelain'], cwd);
     if (porcelain) {
-      dirtyCount = porcelain.split('\n').length;
+      const lines = porcelain.split('\n');
+      dirtyCount = lines.length;
+      changedFiles = lines.map(line => {
+        const status = line.substring(0, 2).trim();
+        const file = line.substring(3);
+        return { status, file };
+      });
     }
   } catch { /* ignore */ }
 
@@ -50,7 +57,7 @@ async function getStatus(cwd) {
     hasRemote = remotes.length > 0;
   } catch { /* ignore */ }
 
-  return { isRepo: true, branch, dirtyCount, hasRemote, repoRoot };
+  return { isRepo: true, branch, dirtyCount, changedFiles, hasRemote, repoRoot };
 }
 
 async function init(cwd) {
