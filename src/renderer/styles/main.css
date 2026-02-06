@@ -151,6 +151,25 @@ html, body {
   background: var(--border-secondary);
 }
 
+.toolbar-git-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--text-muted);
+}
+
+.toolbar-git-indicator.git-active {
+  color: #2ea043;
+}
+
+.toolbar-btn.git-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ── Tab Bar ── */
 .tab-bar {
   display: flex;

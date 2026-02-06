@@ -6,6 +6,7 @@ import './styles/large-file-viewer.css';
 import './styles/recent-files-dialog.css';
 import './styles/clipboard-history-dialog.css';
 import './styles/compare-dialog.css';
+import './styles/git-commit-dialog.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -15,6 +16,7 @@ import { LargeFileViewer } from './editor/large-file-viewer';
 import { RecentFilesDialog } from './components/recent-files-dialog';
 import { ClipboardHistoryDialog } from './components/clipboard-history-dialog';
 import { CompareTabDialog } from './components/compare-tab-dialog';
+import { GitCommitDialog } from './components/git-commit-dialog';
 import { setEditorTheme } from './editor/monaco-setup';
 
 // ── Initialize Components ──
@@ -31,6 +33,7 @@ const findInFiles = new FindInFiles(fifContainer);
 const recentFilesDialog = new RecentFilesDialog();
 const clipboardHistoryDialog = new ClipboardHistoryDialog();
 const compareTabDialog = new CompareTabDialog();
+const gitCommitDialog = new GitCommitDialog();
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -70,6 +73,124 @@ const largeFileViewers = new Map(); // tabId → LargeFileViewer
 
 let newFileCounter = 1;
 let currentFolderPath = null;
+
+// ── Git State ──
+
+let gitState = { isRepo: false, branch: '', dirtyCount: 0, hasRemote: false, repoRoot: null };
+
+const gitIndicator = document.getElementById('git-status-indicator');
+const gitInitBtn = document.getElementById('git-init-btn');
+const gitStageBtn = document.getElementById('git-stage-btn');
+const gitCommitBtn = document.getElementById('git-commit-btn');
+const gitPushBtn = document.getElementById('git-push-btn');
+const gitPullBtn = document.getElementById('git-pull-btn');
+
+function getActiveFileDirPath() {
+  const tabId = tabManager.getActiveTabId();
+  if (!tabId) return null;
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.filePath) return null;
+  const parts = tab.filePath.split(/[/\\]/);
+  parts.pop();
+  return parts.join('/') || null;
+}
+
+async function refreshGitStatus() {
+  const dirPath = getActiveFileDirPath();
+  gitState = await window.api.gitStatus(dirPath);
+  updateGitUI();
+}
+
+function updateGitUI() {
+  const hasDirPath = !!getActiveFileDirPath();
+
+  // Indicator color
+  gitIndicator.classList.toggle('git-active', gitState.isRepo);
+
+  // Show/hide buttons
+  gitInitBtn.style.display = (!gitState.isRepo && hasDirPath) ? '' : 'none';
+  gitStageBtn.style.display = gitState.isRepo ? '' : 'none';
+  gitCommitBtn.style.display = gitState.isRepo ? '' : 'none';
+  gitPushBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
+  gitPullBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
+
+  // Disable stage when nothing dirty
+  gitStageBtn.disabled = gitState.dirtyCount === 0;
+
+  // Status bar
+  if (gitState.isRepo) {
+    statusBar.updateGit(gitState.branch, gitState.dirtyCount);
+  } else {
+    statusBar.clearGit();
+  }
+}
+
+async function gitInit() {
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  const result = await window.api.gitInit(dirPath);
+  if (result.success) {
+    statusBar.showMessage('Git repository initialized');
+  } else {
+    statusBar.showMessage(`Git init failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+}
+
+async function gitStageAll() {
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  const result = await window.api.gitStageAll(dirPath);
+  if (result.success) {
+    statusBar.showMessage('All changes staged');
+  } else {
+    statusBar.showMessage(`Stage failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+}
+
+function gitCommitOpen() {
+  const summary = `${gitState.branch} — ${gitState.dirtyCount} file(s) changed`;
+  gitCommitDialog.show(summary);
+}
+
+gitCommitDialog.onCommit(async (message) => {
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  const result = await window.api.gitCommit(dirPath, message);
+  if (result.success) {
+    statusBar.showMessage(result.summary || 'Committed');
+  } else {
+    statusBar.showMessage(`Commit failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+});
+
+async function gitPush() {
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  statusBar.showMessage('Pushing...');
+  const result = await window.api.gitPush(dirPath);
+  if (result.success) {
+    statusBar.showMessage('Pushed successfully');
+  } else {
+    statusBar.showMessage(`Push failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+}
+
+async function gitPull() {
+  const dirPath = getActiveFileDirPath();
+  if (!dirPath) return;
+  statusBar.showMessage('Pulling...');
+  const result = await window.api.gitPull(dirPath);
+  if (result.success) {
+    statusBar.showMessage('Pulled successfully');
+  } else {
+    statusBar.showMessage(`Pull failed: ${result.error}`);
+  }
+  await refreshGitStatus();
+}
 
 // ── Theme Logic ──
 
@@ -131,6 +252,8 @@ tabManager.onActivate((tabId) => {
     document.title = `${tab.title} - NotepadClone`;
     window.api.notifyActiveFile(tab.filePath || null);
   }
+
+  refreshGitStatus();
 });
 
 tabManager.onClose((tabId) => {
@@ -345,6 +468,7 @@ async function saveFile() {
     const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
     if (result.success) {
       tabManager.setDirty(tabId, false);
+      refreshGitStatus();
     } else {
       statusBar.showMessage(`Save failed: ${result.error}`);
     }
@@ -520,6 +644,11 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'find-in-files': findInFiles.toggle(); break;
     case 'word-wrap': editorManager.toggleWordWrap(); break;
     case 'column-select': toggleColumnSelection(); break;
+    case 'git-init': gitInit(); break;
+    case 'git-stage': gitStageAll(); break;
+    case 'git-commit': gitCommitOpen(); break;
+    case 'git-push': gitPush(); break;
+    case 'git-pull': gitPull(); break;
   }
 });
 

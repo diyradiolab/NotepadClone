@@ -44,6 +44,25 @@
       <button class="toolbar-btn" data-action="column-select" id="btn-column-select" title="Column Selection Mode (Alt+Shift+C)">
         <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="8" height="12" rx="0.5" stroke-dasharray="2,2"/><line x1="6" y1="5" x2="6" y2="11"/><line x1="10" y1="5" x2="10" y2="11"/><line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="11" x2="10" y2="11"/></svg></span>
       </button>
+      <span class="toolbar-separator"></span>
+      <span id="git-status-indicator" class="toolbar-git-indicator" title="Git status">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="8" cy="3.5" r="2"/><circle cx="8" cy="12.5" r="2"/><line x1="8" y1="5.5" x2="8" y2="10.5"/></svg>
+      </span>
+      <button class="toolbar-btn git-btn" id="git-init-btn" data-action="git-init" title="Initialize Git Repository" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="10" rx="1"/><line x1="8" y1="6" x2="8" y2="10"/><line x1="6" y1="8" x2="10" y2="8"/></svg></span>
+      </button>
+      <button class="toolbar-btn git-btn" id="git-stage-btn" data-action="git-stage" title="Stage All Changes" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5.5" x2="8" y2="10.5"/><line x1="5.5" y1="8" x2="10.5" y2="8"/></svg></span>
+      </button>
+      <button class="toolbar-btn git-btn" id="git-commit-btn" data-action="git-commit" title="Commit" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8 6.5,11.5 13,4.5"/></svg></span>
+      </button>
+      <button class="toolbar-btn git-btn" id="git-push-btn" data-action="git-push" title="Push" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="13" x2="8" y2="3"/><polyline points="4.5,6.5 8,3 11.5,6.5"/></svg></span>
+      </button>
+      <button class="toolbar-btn git-btn" id="git-pull-btn" data-action="git-pull" title="Pull" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="3" x2="8" y2="13"/><polyline points="4.5,9.5 8,13 11.5,9.5"/></svg></span>
+      </button>
     </div>
 
     <!-- Tab bar -->
@@ -66,6 +85,7 @@
     <div id="status-bar" class="status-bar">
       <span id="status-position" class="status-item">Ln 1, Col 1</span>
       <span id="status-selection" class="status-item"></span>
+      <span id="status-git" class="status-item" style="display:none"></span>
       <span class="status-spacer"></span>
       <span id="status-encoding" class="status-item">UTF-8</span>
       <span id="status-line-ending" class="status-item">CRLF</span>

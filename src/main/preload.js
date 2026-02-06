@@ -94,4 +94,12 @@ contextBridge.exposeInMainWorld('api', {
 
   // Compare/diff
   onMenuCompareTabs: (callback) => ipcRenderer.on('main:compare-tabs', callback),
+
+  // Git operations
+  gitStatus: (dirPath) => ipcRenderer.invoke('renderer:git-status', dirPath),
+  gitInit: (dirPath) => ipcRenderer.invoke('renderer:git-init', dirPath),
+  gitStageAll: (dirPath) => ipcRenderer.invoke('renderer:git-stage-all', dirPath),
+  gitCommit: (dirPath, message) => ipcRenderer.invoke('renderer:git-commit', { dirPath, message }),
+  gitPush: (dirPath) => ipcRenderer.invoke('renderer:git-push', dirPath),
+  gitPull: (dirPath) => ipcRenderer.invoke('renderer:git-pull', dirPath),
 });

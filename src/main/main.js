@@ -17,6 +17,7 @@ const Store = require('electron-store');
 const { buildMenu } = require('./menu');
 const { readFile, writeFile, readDirectory } = require('./file-service');
 const { LargeFileManager, LARGE_FILE_THRESHOLD } = require('./large-file-service');
+const gitService = require('./git-service');
 
 const largeFileManager = new LargeFileManager();
 
@@ -534,4 +535,30 @@ ipcMain.handle('renderer:search-large-file', async (_event, { filePath, query, u
 ipcMain.handle('renderer:close-large-file', async (_event, filePath) => {
   largeFileManager.close(filePath);
   return { success: true };
+});
+
+// ── Git Operations ──
+
+ipcMain.handle('renderer:git-status', async (_event, dirPath) => {
+  return gitService.getStatus(dirPath);
+});
+
+ipcMain.handle('renderer:git-init', async (_event, dirPath) => {
+  return gitService.init(dirPath);
+});
+
+ipcMain.handle('renderer:git-stage-all', async (_event, dirPath) => {
+  return gitService.stageAll(dirPath);
+});
+
+ipcMain.handle('renderer:git-commit', async (_event, { dirPath, message }) => {
+  return gitService.commit(dirPath, message);
+});
+
+ipcMain.handle('renderer:git-push', async (_event, dirPath) => {
+  return gitService.push(dirPath);
+});
+
+ipcMain.handle('renderer:git-pull', async (_event, dirPath) => {
+  return gitService.pull(dirPath);
 });
