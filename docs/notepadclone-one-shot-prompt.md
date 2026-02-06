@@ -61,14 +61,16 @@ Create `.gitignore`: node_modules, dist, release, .DS_Store.
 - `stageFile(cwd, filePath)`: `git add -- filePath`
 - `commit(cwd, message)`: Check if anything is staged via `git diff --cached --quiet` (exit 1 = has staged). If nothing staged, auto `git add -A` first. Then `git commit -m message`.
 - `push(cwd)`, `pull(cwd)`, `init(cwd)`
+- `fileLog(cwd, filePath, maxCount=200)`: Run `git log --pretty=format:"%H|%an|%aI|%s" -n <max> -- <relPath>`. Compute relPath relative to repo root. Parse each line by splitting on `|` (limit 4 parts — subject may contain `|`). Return `[{ hash, author, date, subject }]`.
+- `fileShow(cwd, hash, filePath)`: Run `git show <hash>:<relPath>` to get file content at a specific commit. Normalize path separators to forward slashes for git.
 
 ### `src/main/menu.js`
-- Build native menu: File (New, Open, Open Folder, Recent Files submenu, Save, Save As, Close Tab), Edit (Undo, Redo, Cut, Copy, Paste, Select All, Clipboard History), Search (Find, Replace, Find in Files, Go to Line, Column Selection), Tools (Compare Active Tab With..., SQL Query), View (File Explorer, Word Wrap, Theme radio: Light/Dark/System, Zoom In/Out/Reset, DevTools, Fullscreen), Help (About).
+- Build native menu: File (New, Open, Open Folder, Recent Files submenu, Save, Save As, Close Tab), Edit (Undo, Redo, Cut, Copy, Paste, Select All, Clipboard History), Search (Find, Replace, Find in Files, Go to Line, Column Selection), Tools (Git File History Ctrl+Shift+H, Compare Active Tab With..., SQL Query), View (File Explorer, Word Wrap, Theme radio: Light/Dark/System, Zoom In/Out/Reset, DevTools, Fullscreen), Help (About).
 - Recent Files submenu: top 5, then "Show All...", then "Clear". Rebuild menu when recent files change.
 - macOS: app menu with standard roles. Share menu for current file.
 
 ### `src/main/preload.js`
-- Expose all IPC via `window.api` using contextBridge. Each menu event gets an `onMenuX` listener. Git operations, file operations, clipboard, theme, file watching, large file operations all go through here.
+- Expose all IPC via `window.api` using contextBridge. Each menu event gets an `onMenuX` listener. Git operations (including `gitFileLog`, `gitFileDiff`), file operations, clipboard, theme, file watching, large file operations all go through here.
 
 ## Step 3: Renderer — Styles
 
@@ -85,7 +87,8 @@ Create `.gitignore`: node_modules, dist, release, .DS_Store.
 - Define Monaco editor themes: `notepadpp` (light) and `notepadpp-dark` matching Notepad++ colors
 
 ### Component CSS files (one per component, BEM-lite, `sqp-`/`fif-` prefixes):
-- `file-explorer.css`: side panel, tree with indented items, expand/collapse arrows
+- `file-explorer.css`: side panel, tree with indented items, expand/collapse arrows, right-click context menu (fixed position, shadow, hover highlight)
+- `git-history-panel.css`: flex row layout — commit list (280px, scrollable, border-right) on left, diff editor (flex 1) on right. Commit rows with subject, hash (monospace, 7 chars), author, relative date. Active commit with left border accent. Empty state and select-prompt centered messages.
 - `find-in-files.css`: bottom panel, 250px height, search bar, results grouped by file with sticky headers
 - `sql-query-panel.css`: bottom panel, 300px height, options bar (delimiter dropdown, header checkbox), query textarea, run/export buttons, results table with sticky headers, clickable rows
 - `large-file-viewer.css`: virtual scrolling viewer, progress bar
@@ -105,7 +108,7 @@ All panels follow the pattern: `.hidden { display: none }`, header with close bu
 ### `src/renderer/editor/editor-manager.js`
 - One shared Monaco editor instance, multiple models (one per tab).
 - `createEditorForTab(tabId, content, filename)`: create model, detect language from filename, set model on editor. Return language info.
-- `activateTab(tabId)`: swap model on the shared editor.
+- `activateTab(tabId)`: swap model on the shared editor. Handles three tab types: regular (create editor with model), diff (create diff editor), and custom/history (early return — rendered externally). Both the deactivation path (saving outgoing tab state) and activation path need guards for each type.
 - `getContent(tabId)`: get model value.
 - `setContent(tabId, content)`: set model value.
 - `closeTab(tabId)`: dispose model.
@@ -149,6 +152,8 @@ All panels follow the pattern: `.hidden { display: none }`, header with close bu
 - `openFolder()`: prompt user, set rootPath, render tree.
 - Lazy-load subdirectories on expand.
 - Click file → emit `onFileOpen(filePath)`.
+- Right-click file → show context menu with "Git History" option → emit `onFileHistory(filePath)`.
+- Context menu: fixed-position div appended to body, dismissed on click-elsewhere or Escape. Bind dismiss listeners once in constructor.
 
 ### `src/renderer/components/find-in-files.js`
 - Bottom panel: search input, regex/case-sensitive options, search button.
@@ -175,6 +180,14 @@ All panels follow the pattern: `.hidden { display: none }`, header with close bu
 ### `src/renderer/components/compare-tab-dialog.js`
 - Modal overlay listing open tabs. Select one to diff against active tab.
 
+### `src/renderer/components/git-history-panel.js`
+- `GitHistoryPanel(tabManager, editorManager)`: opens a new tab showing per-file git commit history.
+- `show(filePath)`: creates tab titled "History: filename", fetches commits via `window.api.gitFileLog()`, stores entry in `editorManager.editors` with `isHistoryTab: true`, then renders.
+- `_render(tabId, filePath, commits, dirPath, filename)`: builds split-panel DOM — scrollable commit list on left (subject, hash short, author, relative date per row), diff viewer on right. Empty state when no commits.
+- Click a commit → fetch file at that commit and previous commit via `window.api.gitFileDiff()`, create Monaco diff editor showing the change. First commit diffs against empty string.
+- `_formatRelativeDate(isoDate)`: converts ISO date to "2 hours ago", "3 days ago", etc.
+- Re-renders when tab is re-activated (history tabs manage their own DOM, not a Monaco model).
+
 ### `src/renderer/components/git-commit-dialog.js`
 - Modal overlay receiving full `gitState` object.
 - Shows "Commit to **branch**" header.
@@ -186,7 +199,7 @@ All panels follow the pattern: `.hidden { display: none }`, header with close bu
 ## Step 6: Renderer — index.html
 
 Single-page layout:
-1. Toolbar: icon buttons (New, Open, Save | Undo, Redo | Find, Replace | Find in Files | Word Wrap, Column Select | Git indicator, Git Init, Stage All, Stage File, Commit, Push, Pull | SQL Query). All buttons use inline SVG icons.
+1. Toolbar: icon buttons (New, Open, Save | Undo, Redo | Find, Replace | Find in Files | Word Wrap, Column Select | Git indicator, Git Init, Stage All, Stage File, Commit, Push, Pull, History | SQL Query). Git History button: clock icon (circle + clock hands), hidden by default, shown when repo active and active tab has a file path. All buttons use inline SVG icons.
 2. Tab bar
 3. Main content: file explorer (hidden by default) + editor container (side by side)
 4. Find in Files panel (hidden)
@@ -196,12 +209,13 @@ Single-page layout:
 ## Step 7: Renderer — index.js (wiring)
 
 Import all CSS files and components. Instantiate everything. Wire:
-- Tab activate → switch editor, update status bar, refresh git status
-- Tab close → clean up editor/viewer/watcher
+- Tab activate → switch editor, update status bar, refresh git status. For history tabs: re-render via `gitHistoryPanel._render()` and set status bar to "Git History".
+- Tab close → clean up editor/viewer/watcher. For history tabs: delete entry from `editorManager.editors` and clear `activeTabId`.
 - Editor change → mark tab dirty
 - Editor cursor → update status bar
 - Editor copy → clipboard ring
 - File explorer file open → openFileByPath()
+- File explorer file history → gitHistoryPanel.show(filePath)
 - Find in Files result click → openFileByPath(path, line)
 - SQL panel row click → revealLine()
 - Toolbar clicks → switch on data-action attribute
@@ -228,5 +242,7 @@ Import all CSS files and components. Instantiate everything. Wire:
 6. **Large files**: Route files >10MB to LargeFileViewer instead of Monaco. Virtual scrolling, chunk loading from main process.
 
 7. **macOS key repeat**: Must disable ApplePressAndHoldEnabled or holding keys shows accent picker instead of repeating.
+
+8. **Custom tab types**: Tabs that aren't standard Monaco editors (history, diff) need explicit guards in `editor-manager.js` `activateTab()` — both the deactivation path (don't try to save viewState on a tab with no editor) and the activation path (early return, let the component render itself). Store custom tab data in `editorManager.editors` with a type flag (e.g. `isHistoryTab: true`) so the entry exists but the regular editor creation is skipped.
 
 Build with `npx webpack --mode development`, run with `npx electron .`.
