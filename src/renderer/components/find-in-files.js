@@ -1,3 +1,7 @@
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * FindInFiles provides a unified search panel at the bottom of the window.
  * Supports two scopes:
@@ -143,7 +147,7 @@ export class FindInFiles {
       const flags = caseSensitive ? 'g' : 'gi';
       pattern = useRegex
         ? new RegExp(query, flags)
-        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+        : new RegExp(escapeRegex(query), flags);
     } catch (e) {
       this._setStatus(`Invalid regex: ${e.message}`);
       return;
@@ -170,7 +174,7 @@ export class FindInFiles {
       const flags = caseSensitive ? 'g' : 'gi';
       highlightPattern = useRegex
         ? new RegExp(query, flags)
-        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+        : new RegExp(escapeRegex(query), flags);
     } catch {
       highlightPattern = null;
     }
@@ -254,7 +258,7 @@ export class FindInFiles {
       const flags = caseSensitive ? 'g' : 'gi';
       highlightPattern = useRegex
         ? new RegExp(query, flags)
-        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+        : new RegExp(escapeRegex(query), flags);
     } catch {
       highlightPattern = null;
     }

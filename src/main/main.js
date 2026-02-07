@@ -19,6 +19,10 @@ const { readFile, writeFile, readDirectory } = require('./file-service');
 const { LargeFileManager, LARGE_FILE_THRESHOLD } = require('./large-file-service');
 const gitService = require('./git-service');
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const largeFileManager = new LargeFileManager();
 
 const store = new Store({
@@ -447,7 +451,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
   let pattern;
   try {
     const flags = caseSensitive ? 'g' : 'gi';
-    pattern = useRegex ? new RegExp(query, flags) : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    pattern = useRegex ? new RegExp(query, flags) : new RegExp(escapeRegex(query), flags);
   } catch {
     return { results: [], error: 'Invalid regex' };
   }
@@ -566,7 +570,7 @@ ipcMain.handle('renderer:search-large-file', async (_event, { filePath, query, u
   let pattern;
   try {
     const flags = caseSensitive ? 'g' : 'gi';
-    pattern = useRegex ? new RegExp(query, flags) : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    pattern = useRegex ? new RegExp(query, flags) : new RegExp(escapeRegex(query), flags);
   } catch {
     return { results: [], error: 'Invalid regex' };
   }

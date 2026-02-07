@@ -32,6 +32,11 @@
   --tab-close-hover-bg: #e81123;
   --drag-accent: #007acc;
   --input-border-focus: #007acc;
+  --border-color: #c0c0c0;
+  --bg-hover: #d8e8f8;
+  --bg-active: #c0d8f0;
+  --bg-input: #ffffff;
+  --accent-color: #007acc;
 }
 
 [data-theme="dark"] {
@@ -67,6 +72,11 @@
   --tab-close-hover-bg: #e81123;
   --drag-accent: #3794ff;
   --input-border-focus: #3794ff;
+  --border-color: #3e3e42;
+  --bg-hover: #3e3e42;
+  --bg-active: #094771;
+  --bg-input: #1e1e1e;
+  --accent-color: #3794ff;
 }
 
 /* ── Reset & Base ── */
