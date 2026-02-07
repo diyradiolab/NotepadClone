@@ -37,6 +37,17 @@
   --bg-active: #c0d8f0;
   --bg-input: #ffffff;
   --accent-color: #007acc;
+  --overlay-bg: rgba(0, 0, 0, 0.4);
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
+  --syntax-boolean: #0000ff;
+  --syntax-null: #808080;
+  --syntax-tag: #800000;
+  --syntax-attr-name: #ff0000;
+  --syntax-attr-value: #a31515;
+  --syntax-text: #1e1e1e;
+  --syntax-error: #e51400;
+  --sql-error: #e04040;
 }
 
 [data-theme="dark"] {
@@ -77,6 +88,17 @@
   --bg-active: #094771;
   --bg-input: #1e1e1e;
   --accent-color: #3794ff;
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-boolean: #569cd6;
+  --syntax-null: #808080;
+  --syntax-tag: #569cd6;
+  --syntax-attr-name: #9cdcfe;
+  --syntax-attr-value: #ce9178;
+  --syntax-text: #d4d4d4;
+  --syntax-error: #f48771;
+  --sql-error: #f48771;
 }
 
 /* ── Reset & Base ── */
@@ -364,7 +386,7 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;

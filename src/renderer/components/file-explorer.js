@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * FileExplorer renders a collapsible folder tree in a side panel.
  * Directories are lazily loaded on expand.
@@ -58,7 +60,7 @@ export class FileExplorer {
     row.innerHTML = `
       <span class="tree-arrow">&#9654;</span>
       <span class="tree-icon tree-icon-folder">&#128193;</span>
-      <span class="tree-name">${this._escapeHtml(name)}</span>
+      <span class="tree-name">${escapeHtml(name)}</span>
     `;
 
     row.addEventListener('click', () => this._toggleDirectory(node));
@@ -81,7 +83,7 @@ export class FileExplorer {
     row.className = 'tree-row';
     row.innerHTML = `
       <span class="tree-icon tree-icon-file">${this._getFileIcon(name)}</span>
-      <span class="tree-name">${this._escapeHtml(name)}</span>
+      <span class="tree-name">${escapeHtml(name)}</span>
     `;
 
     row.addEventListener('click', () => {
@@ -219,9 +221,4 @@ export class FileExplorer {
     return !this.container.classList.contains('hidden');
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

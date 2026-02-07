@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * Searchable dialog showing clipboard ring history (up to 100 items).
  * Same overlay pattern as RecentFilesDialog.
@@ -55,9 +57,9 @@ export class ClipboardHistoryDialog {
         const preview = this._formatPreview(entry.text, 80);
         const timeStr = this._formatTime(entry.timestamp);
         return `<div class="clipboard-history-item" data-index="${idx}">
-          <span class="clipboard-history-item-text">${this._escapeHtml(preview)}</span>
+          <span class="clipboard-history-item-text">${escapeHtml(preview)}</span>
           <div class="clipboard-history-item-meta">
-            <span class="clipboard-history-item-source">${this._escapeHtml(entry.source)}</span>
+            <span class="clipboard-history-item-source">${escapeHtml(entry.source)}</span>
             <span class="clipboard-history-item-time">${timeStr}</span>
           </div>
         </div>`;
@@ -139,9 +141,4 @@ export class ClipboardHistoryDialog {
     return date.toLocaleDateString();
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

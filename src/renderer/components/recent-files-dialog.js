@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * Searchable dialog showing all recent files (up to 100).
  * Follows the go-to-line overlay pattern.
@@ -56,8 +58,8 @@ export class RecentFilesDialog {
         const filename = parts.pop();
         const dir = parts.join('/');
         return `<div class="recent-files-item" data-path="${this._escapeAttr(filePath)}">
-          <span class="recent-files-item-name">${this._escapeHtml(filename)}</span>
-          <span class="recent-files-item-dir">${this._escapeHtml(dir)}</span>
+          <span class="recent-files-item-name">${escapeHtml(filename)}</span>
+          <span class="recent-files-item-dir">${escapeHtml(dir)}</span>
         </div>`;
       }).join('');
     };
@@ -109,11 +111,6 @@ export class RecentFilesDialog {
     }
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   _escapeAttr(text) {
     return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;');

@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * TabManager handles the tab bar UI and tab state.
  * Each tab tracks: id, title, filePath, dirty status.
@@ -165,7 +167,7 @@ export class TabManager {
 
     el.innerHTML = `
       <span class="tab-dirty" style="display:none">\u25CF</span>
-      <span class="tab-title">${this._escapeHtml(tab.title)}</span>
+      <span class="tab-title">${escapeHtml(tab.title)}</span>
       <button class="tab-close" title="Close">\u00D7</button>
     `;
 
@@ -308,9 +310,4 @@ export class TabManager {
     }
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

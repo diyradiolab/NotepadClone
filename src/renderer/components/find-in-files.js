@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -188,7 +190,7 @@ export class FindInFiles {
 
     const headerEl = document.createElement('div');
     headerEl.className = 'fif-file-header';
-    headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${this._escapeHtml(docName)} (${matches.length})`;
+    headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${escapeHtml(docName)} (${matches.length})`;
     headerEl.addEventListener('click', () => {
       fileEl.classList.toggle('collapsed');
       const icon = headerEl.querySelector('.fif-collapse-icon');
@@ -280,7 +282,7 @@ export class FindInFiles {
 
       const headerEl = document.createElement('div');
       headerEl.className = 'fif-file-header';
-      headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${this._escapeHtml(shortPath)} (${matches.length})`;
+      headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${escapeHtml(shortPath)} (${matches.length})`;
       headerEl.addEventListener('click', () => {
         fileEl.classList.toggle('collapsed');
         const icon = headerEl.querySelector('.fif-collapse-icon');
@@ -311,7 +313,7 @@ export class FindInFiles {
   }
 
   _highlightMatches(text, pattern) {
-    const escaped = this._escapeHtml(text);
+    const escaped = escapeHtml(text);
     if (!pattern) return escaped;
 
     const segments = [];
@@ -332,8 +334,8 @@ export class FindInFiles {
 
     return segments.map(s =>
       s.highlight
-        ? `<span class="fif-match">${this._escapeHtml(s.text)}</span>`
-        : this._escapeHtml(s.text)
+        ? `<span class="fif-match">${escapeHtml(s.text)}</span>`
+        : escapeHtml(s.text)
     ).join('');
   }
 
@@ -418,9 +420,4 @@ export class FindInFiles {
     this.onResultClickCallbacks.push(callback);
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

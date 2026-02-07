@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * NotesPanel — right-side scratchpad for quick notes.
  * Multiple named plain-text notes, persisted via electron-store.
@@ -178,7 +180,7 @@ export class NotesPanel {
     const note = this.notes.find(n => n.id === id);
     if (!note) return;
 
-    this._showConfirmDialog(`Delete "${this._escapeHtml(note.title)}"?`, () => {
+    this._showConfirmDialog(`Delete "${escapeHtml(note.title)}"?`, () => {
       const index = this.notes.findIndex(n => n.id === id);
       this.notes.splice(index, 1);
 
@@ -489,9 +491,4 @@ export class NotesPanel {
 
   // ── Util ──
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

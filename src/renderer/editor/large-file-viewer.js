@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * LargeFileViewer renders a virtual-scrolling text view for files too large for Monaco.
  * Only visible lines (plus a buffer) are in the DOM at any time.
@@ -128,7 +130,7 @@ export class LargeFileViewer {
       const lineNum = String(i + 1).padStart(gutterWidth, ' ');
 
       gutterHtml += `<div class="lfv-line-number" style="height:${this.lineHeight}px">${lineNum}</div>`;
-      contentHtml += `<div class="lfv-line" style="height:${this.lineHeight}px">${this._escapeHtml(text)}</div>`;
+      contentHtml += `<div class="lfv-line" style="height:${this.lineHeight}px">${escapeHtml(text)}</div>`;
     }
 
     this.content.style.position = 'absolute';
@@ -176,10 +178,4 @@ export class LargeFileViewer {
     this.container.innerHTML = '';
   }
 
-  _escapeHtml(text) {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
 }

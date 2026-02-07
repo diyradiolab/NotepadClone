@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * Modal dialog for entering a Git commit message.
  * Same overlay pattern as ClipboardHistoryDialog.
@@ -36,7 +38,7 @@ export class GitCommitDialog {
     this.overlay.className = 'git-commit-overlay';
     this.overlay.innerHTML = `
       <div class="git-commit-dialog">
-        <div class="git-commit-header">Commit to <strong>${this._escapeHtml(branch)}</strong></div>
+        <div class="git-commit-header">Commit to <strong>${escapeHtml(branch)}</strong></div>
         <div class="git-commit-files">${fileListHtml}</div>
         <textarea class="git-commit-textarea" placeholder="Enter commit message..." autofocus></textarea>
         <div class="git-commit-footer">
@@ -86,14 +88,9 @@ export class GitCommitDialog {
   _buildFileList(files) {
     if (!files.length) return '';
     const items = files.map(f =>
-      `<div class="git-commit-file"><span class="git-commit-file-status">${this._escapeHtml(f.status)}</span> ${this._escapeHtml(f.file)}</div>`
+      `<div class="git-commit-file"><span class="git-commit-file-status">${escapeHtml(f.status)}</span> ${escapeHtml(f.file)}</div>`
     ).join('');
     return `<div class="git-commit-file-list">${items}</div>`;
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

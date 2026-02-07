@@ -177,7 +177,7 @@
 }
 
 .sqp-status.sqp-status-error {
-  color: #e04040;
+  color: var(--sql-error);
 }
 
 .sqp-results {
@@ -546,7 +546,7 @@
 
 .sqp-join-warning {
   font-size: 11px;
-  color: #e04040;
+  color: var(--sql-error);
   font-style: italic;
 }
 

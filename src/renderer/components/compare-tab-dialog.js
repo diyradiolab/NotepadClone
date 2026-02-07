@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape-html';
+
 /**
  * Simple overlay listing all non-active, non-diff tabs for comparison.
  * User picks a tab to compare against the current active tab.
@@ -44,8 +46,8 @@ export class CompareTabDialog {
           <div class="compare-dialog-list">
             ${eligible.map(t => `
               <div class="compare-dialog-item" data-tab-id="${t.tabId}">
-                <span class="compare-dialog-item-name">${this._escapeHtml(t.title)}</span>
-                ${t.filePath ? `<span class="compare-dialog-item-path">${this._escapeHtml(t.filePath)}</span>` : ''}
+                <span class="compare-dialog-item-name">${escapeHtml(t.title)}</span>
+                ${t.filePath ? `<span class="compare-dialog-item-path">${escapeHtml(t.filePath)}</span>` : ''}
               </div>
             `).join('')}
           </div>
@@ -89,9 +91,4 @@ export class CompareTabDialog {
     }
   }
 
-  _escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

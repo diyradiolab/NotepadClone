@@ -132,19 +132,19 @@
 /* ── Value (primitives) ── */
 
 .tree-viewer-value--string {
-  color: #ce9178;
+  color: var(--syntax-string);
 }
 
 .tree-viewer-value--number {
-  color: #b5cea8;
+  color: var(--syntax-number);
 }
 
 .tree-viewer-value--boolean {
-  color: #569cd6;
+  color: var(--syntax-boolean);
 }
 
 .tree-viewer-value--null {
-  color: #808080;
+  color: var(--syntax-null);
   font-style: italic;
 }
 
@@ -169,27 +169,27 @@
 /* ── XML attribute ── */
 
 .tree-viewer-attr-name {
-  color: #9cdcfe;
+  color: var(--syntax-attr-name);
   margin-left: 8px;
   font-size: 12px;
 }
 
 .tree-viewer-attr-value {
-  color: #ce9178;
+  color: var(--syntax-attr-value);
   font-size: 12px;
 }
 
 /* ── XML tag name ── */
 
 .tree-viewer-tag {
-  color: #569cd6;
+  color: var(--syntax-tag);
   font-weight: 600;
 }
 
 /* ── XML text content ── */
 
 .tree-viewer-text {
-  color: #d4d4d4;
+  color: var(--syntax-text);
 }
 
 /* ── Search filtering ── */
@@ -207,7 +207,7 @@
 
 .tree-viewer-error {
   padding: 20px;
-  color: #f48771;
+  color: var(--syntax-error);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 13px;
 }
