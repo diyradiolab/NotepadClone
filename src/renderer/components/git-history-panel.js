@@ -108,7 +108,19 @@ export class GitHistoryPanel {
     container.appendChild(wrapper);
   }
 
+  _disposeDiffEditor() {
+    if (this._currentDiffEditor) {
+      this._currentDiffEditor.dispose();
+      this._currentDiffEditor = null;
+    }
+    if (this._currentModels) {
+      this._currentModels.forEach(m => m.dispose());
+      this._currentModels = null;
+    }
+  }
+
   async _showDiff(wrapper, filePath, commits, index, dirPath, filename) {
+    this._disposeDiffEditor();
     const diffPanel = wrapper.querySelector('.ghp-diff');
     diffPanel.innerHTML = '';
 

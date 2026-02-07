@@ -170,17 +170,6 @@ export class FindInFiles {
 
     if (matches.length === 0) return;
 
-    // Build highlight pattern for display
-    let highlightPattern;
-    try {
-      const flags = caseSensitive ? 'g' : 'gi';
-      highlightPattern = useRegex
-        ? new RegExp(query, flags)
-        : new RegExp(escapeRegex(query), flags);
-    } catch {
-      highlightPattern = null;
-    }
-
     // Render results — no file grouping needed for single document
     const tab = this.tabManager.getTab(tabId);
     const docName = tab ? tab.title : 'Current Document';
@@ -206,7 +195,7 @@ export class FindInFiles {
       lineEl.className = 'fif-result-line';
 
       const lineNumSpan = `<span class="fif-line-num">${match.line}:</span> `;
-      const highlightedText = this._highlightMatches(match.text, highlightPattern);
+      const highlightedText = this._highlightMatches(match.text, pattern);
       lineEl.innerHTML = lineNumSpan + highlightedText;
 
       lineEl.addEventListener('click', () => {

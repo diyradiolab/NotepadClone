@@ -683,6 +683,7 @@ tabManager.onClose((tabId) => {
 
   // Clean up history tab
   if (tab && tab.isHistoryTab) {
+    gitHistoryPanel._disposeDiffEditor();
     editorManager.editors.delete(tabId);
     if (editorManager.activeTabId === tabId) {
       editorManager.activeTabId = null;
