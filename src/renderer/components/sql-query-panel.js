@@ -157,7 +157,7 @@ export class SqlQueryPanel {
     const content = this.editorManager.getContent(tabId);
     if (!content || content.trim().length === 0) return;
 
-    const { columns } = this._parseContent(content);
+    const { columns } = this._parseContent(content, tab.title);
     this.builderColumns = columns;
 
     // Update all column dropdowns, preserving current selection
@@ -369,7 +369,22 @@ export class SqlQueryPanel {
 
   // ── Parse content into rows ──
 
-  _parseContent(content) {
+  _parseContent(content, filename) {
+    const lower = (filename || '').toLowerCase();
+
+    // Try JSON structured parsing for .json files
+    if (lower.endsWith('.json')) {
+      const result = this._parseJSONContent(content);
+      if (result) return result;
+    }
+
+    // Try XML structured parsing for .xml files
+    if (lower.endsWith('.xml')) {
+      const result = this._parseXMLContent(content);
+      if (result) return result;
+    }
+
+    // Fallback: delimiter-based line splitting
     const rawLines = content.split(/\r?\n/);
     // Remove trailing empty line if present
     if (rawLines.length > 0 && rawLines[rawLines.length - 1] === '') rawLines.pop();
@@ -410,6 +425,144 @@ export class SqlQueryPanel {
     return { data, columns };
   }
 
+  // ── JSON structured parsing (array of objects → rows) ──
+
+  _parseJSONContent(content) {
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return null;
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+    // Union all keys for columns
+    const keySet = new Set();
+    for (const obj of parsed) {
+      if (typeof obj !== 'object' || obj === null) return null;
+      Object.keys(obj).forEach(k => keySet.add(k));
+    }
+    const colNames = Array.from(keySet);
+
+    // Build source line map (approximate line for each array element)
+    const lineMap = this._buildJSONLineMap(content, parsed.length);
+
+    const data = parsed.map((obj, idx) => {
+      const row = { _num: lineMap[idx] || (idx + 1), _index: idx };
+      for (const key of colNames) {
+        const val = obj[key];
+        if (val === undefined || val === null) {
+          row[key] = '';
+        } else if (typeof val === 'object') {
+          row[key] = JSON.stringify(val);
+        } else {
+          row[key] = String(val);
+        }
+      }
+      return row;
+    });
+
+    const columns = ['_num', '_index', ...colNames];
+    return { data, columns };
+  }
+
+  _buildJSONLineMap(content, count) {
+    const map = [];
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let line = 1;
+    let arrayFound = false;
+
+    for (let i = 0; i < content.length; i++) {
+      const ch = content[i];
+      if (ch === '\n') { line++; continue; }
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+
+      if (ch === '[' && !arrayFound) {
+        arrayFound = true;
+        depth = 1;
+        continue;
+      }
+      if (!arrayFound) continue;
+
+      if (ch === '{' || ch === '[') {
+        if (depth === 1 && ch === '{') map.push(line);
+        depth++;
+      } else if (ch === '}' || ch === ']') {
+        depth--;
+        if (depth === 0) break;
+      }
+    }
+    return map;
+  }
+
+  // ── XML structured parsing (repeating elements → rows) ──
+
+  _parseXMLContent(content) {
+    let doc;
+    try {
+      const parser = new DOMParser();
+      doc = parser.parseFromString(content, 'application/xml');
+    } catch {
+      return null;
+    }
+    if (doc.querySelector('parsererror')) return null;
+
+    const root = doc.documentElement;
+    const children = Array.from(root.children);
+    if (children.length < 2) return null;
+
+    // Find repeating tag name
+    const firstName = children[0].tagName;
+    const repeating = children.filter(c => c.tagName === firstName);
+    if (repeating.length < 2) return null;
+
+    // Extract columns from child element tag names + attributes
+    const keySet = new Set();
+    const attrSet = new Set();
+    for (const el of repeating) {
+      Array.from(el.children).forEach(child => keySet.add(child.tagName));
+      Array.from(el.attributes).forEach(attr => attrSet.add('@' + attr.name));
+    }
+    const colNames = [...Array.from(attrSet), ...Array.from(keySet)];
+
+    // Build source line map
+    const lineMap = this._buildXMLLineMap(content, firstName);
+
+    const data = repeating.map((el, idx) => {
+      const row = { _num: lineMap[idx] || (idx + 1), _index: idx };
+      for (const col of colNames) {
+        if (col.startsWith('@')) {
+          const attrName = col.slice(1);
+          row[col] = el.getAttribute(attrName) || '';
+        } else {
+          const child = el.querySelector(col);
+          row[col] = child ? child.textContent : '';
+        }
+      }
+      return row;
+    });
+
+    const columns = ['_num', '_index', ...colNames];
+    return { data, columns };
+  }
+
+  _buildXMLLineMap(content, tagName) {
+    const map = [];
+    const regex = new RegExp(`<${tagName}[\\s>]`, 'g');
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      const line = content.substring(0, match.index).split('\n').length;
+      map.push(line);
+    }
+    return map;
+  }
+
   // ── Execute ──
 
   _executeQuery() {
@@ -440,7 +593,7 @@ export class SqlQueryPanel {
     // Replace FROM data → FROM ? (case-insensitive)
     sql = sql.replace(/\bFROM\s+data\b/gi, 'FROM ?');
 
-    const { data, columns } = this._parseContent(content);
+    const { data, columns } = this._parseContent(content, tab.title);
     if (data.length === 0) {
       this._setStatus('No data rows found.', true);
       return;
