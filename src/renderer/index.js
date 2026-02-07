@@ -42,7 +42,7 @@ const editorManager = new EditorManager(editorContainer);
 const tabManager = new TabManager(tabBar);
 const statusBar = new StatusBar();
 const fileExplorer = new FileExplorer(explorerContainer);
-const findInFiles = new FindInFiles(fifContainer);
+const findInFiles = new FindInFiles(fifContainer, editorManager, tabManager);
 const sqlQueryPanel = new SqlQueryPanel(
   document.getElementById('sql-query'), editorManager, tabManager
 );
@@ -1551,7 +1551,13 @@ fileExplorer.onFileHistory((filePath) => {
 // ── Find in Files → Open Result ──
 
 findInFiles.onResultClick((filePath, line) => {
-  openFileByPath(filePath, line);
+  if (filePath === null) {
+    // Current document search — jump to line in active tab
+    const tabId = tabManager.getActiveTabId();
+    if (tabId) editorManager.revealLine(tabId, line);
+  } else {
+    openFileByPath(filePath, line);
+  }
 });
 
 // ── File Watching ──
@@ -1603,9 +1609,9 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'save': saveFile(); break;
     case 'undo': editorManager.undo(); break;
     case 'redo': editorManager.redo(); break;
-    case 'find': editorManager.find(); break;
+    case 'find': findInFiles.show('document'); break;
     case 'replace': editorManager.replace(); break;
-    case 'find-in-files': findInFiles.toggle(); break;
+    case 'find-in-files': findInFiles.show('directory'); break;
     case 'word-wrap': editorManager.toggleWordWrap(); break;
     case 'column-select': toggleColumnSelection(); break;
     case 'sql-query': sqlQueryPanel.toggle(); break;
@@ -1636,9 +1642,9 @@ window.api.onMenuCloseTab(() => {
 });
 window.api.onMenuUndo(() => editorManager.undo());
 window.api.onMenuRedo(() => editorManager.redo());
-window.api.onMenuFind(() => editorManager.find());
+window.api.onMenuFind(() => findInFiles.show('document'));
 window.api.onMenuReplace(() => editorManager.replace());
-window.api.onMenuFindInFiles(() => findInFiles.toggle());
+window.api.onMenuFindInFiles(() => findInFiles.show('directory'));
 window.api.onMenuToggleWordWrap(() => editorManager.toggleWordWrap());
 window.api.onMenuToggleShowAllChars(() => editorManager.toggleShowAllCharacters());
 window.api.onMenuToggleExplorer(() => fileExplorer.toggle());

@@ -1,11 +1,16 @@
 /**
- * FindInFiles provides a search panel at the bottom of the window.
- * Searches all files in a directory, shows results, click to open.
+ * FindInFiles provides a unified search panel at the bottom of the window.
+ * Supports two scopes:
+ *   - Document: searches the current editor tab (default, Ctrl+F)
+ *   - Directory: searches all files in a directory (Ctrl+Shift+F)
  */
 export class FindInFiles {
-  constructor(container) {
+  constructor(container, editorManager, tabManager) {
     this.container = container;
+    this.editorManager = editorManager;
+    this.tabManager = tabManager;
     this.searchDir = null;
+    this.scope = 'document';
     this.onResultClickCallbacks = [];
     this._render();
   }
@@ -14,16 +19,20 @@ export class FindInFiles {
     this.container.innerHTML = `
       <div class="fif-resize-handle" id="fif-resize-handle"></div>
       <div class="fif-header">
-        <span class="fif-title">FIND IN FILES</span>
+        <span class="fif-title" id="fif-title">FIND</span>
         <button class="fif-close-btn" title="Close">\u00D7</button>
       </div>
       <div class="fif-search-bar">
+        <div class="fif-scope-bar">
+          <button class="fif-scope-btn fif-scope-active" id="fif-scope-doc">Document</button>
+          <button class="fif-scope-btn" id="fif-scope-dir">Directory</button>
+        </div>
         <input type="text" class="fif-input" id="fif-query" placeholder="Search text..." />
         <label class="fif-option"><input type="checkbox" id="fif-regex"> Regex</label>
         <label class="fif-option"><input type="checkbox" id="fif-case"> Match Case</label>
         <button class="fif-search-btn" id="fif-search-btn">Search</button>
       </div>
-      <div class="fif-search-bar fif-search-row2">
+      <div class="fif-search-bar fif-search-row2 hidden" id="fif-row2">
         <input type="text" class="fif-input fif-dir-input" id="fif-dir" placeholder="Search directory..." readonly />
         <button class="fif-browse-btn" id="fif-browse-btn" title="Browse folder">\uD83D\uDCC1</button>
         <input type="text" class="fif-input fif-filter-input" id="fif-filter" placeholder="*.js, *.ts" title="File filter (comma-separated globs)" />
@@ -64,9 +73,147 @@ export class FindInFiles {
         this.container.querySelector('#fif-dir').value = folder;
       }
     });
+
+    // Scope toggle handlers
+    const scopeDocBtn = this.container.querySelector('#fif-scope-doc');
+    const scopeDirBtn = this.container.querySelector('#fif-scope-dir');
+
+    scopeDocBtn.addEventListener('click', () => this._setScope('document'));
+    scopeDirBtn.addEventListener('click', () => this._setScope('directory'));
+  }
+
+  _setScope(scope) {
+    if (scope === this.scope) return;
+    this.scope = scope;
+    const scopeDocBtn = this.container.querySelector('#fif-scope-doc');
+    const scopeDirBtn = this.container.querySelector('#fif-scope-dir');
+    const row2 = this.container.querySelector('#fif-row2');
+    const title = this.container.querySelector('#fif-title');
+    const resultsEl = this.container.querySelector('#fif-results');
+
+    if (scope === 'document') {
+      scopeDocBtn.classList.add('fif-scope-active');
+      scopeDirBtn.classList.remove('fif-scope-active');
+      row2.classList.add('hidden');
+      title.textContent = 'FIND';
+    } else {
+      scopeDirBtn.classList.add('fif-scope-active');
+      scopeDocBtn.classList.remove('fif-scope-active');
+      row2.classList.remove('hidden');
+      title.textContent = 'FIND IN FILES';
+    }
+
+    // Clear results on scope switch, preserve query
+    resultsEl.innerHTML = '';
+    this._setStatus('');
   }
 
   async _doSearch() {
+    if (this.scope === 'document') {
+      this._searchCurrentDocument();
+    } else {
+      await this._searchDirectory();
+    }
+  }
+
+  _searchCurrentDocument() {
+    const query = this.container.querySelector('#fif-query').value.trim();
+    if (!query) return;
+
+    const tabId = this.tabManager.getActiveTabId();
+    if (!tabId) {
+      this._setStatus('No document open');
+      return;
+    }
+
+    const content = this.editorManager.getContent(tabId);
+    if (content === null || content === undefined) {
+      this._setStatus('No document open');
+      return;
+    }
+
+    const useRegex = this.container.querySelector('#fif-regex').checked;
+    const caseSensitive = this.container.querySelector('#fif-case').checked;
+    const resultsEl = this.container.querySelector('#fif-results');
+    resultsEl.innerHTML = '';
+
+    // Build search pattern
+    let pattern;
+    try {
+      const flags = caseSensitive ? 'g' : 'gi';
+      pattern = useRegex
+        ? new RegExp(query, flags)
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    } catch (e) {
+      this._setStatus(`Invalid regex: ${e.message}`);
+      return;
+    }
+
+    // Search line by line
+    const lines = content.split('\n');
+    const matches = [];
+    for (let i = 0; i < lines.length; i++) {
+      pattern.lastIndex = 0;
+      if (pattern.test(lines[i])) {
+        matches.push({ line: i + 1, text: lines[i] });
+      }
+    }
+
+    const statusText = `${matches.length} match${matches.length !== 1 ? 'es' : ''} in current document`;
+    this._setStatus(statusText);
+
+    if (matches.length === 0) return;
+
+    // Build highlight pattern for display
+    let highlightPattern;
+    try {
+      const flags = caseSensitive ? 'g' : 'gi';
+      highlightPattern = useRegex
+        ? new RegExp(query, flags)
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    } catch {
+      highlightPattern = null;
+    }
+
+    // Render results — no file grouping needed for single document
+    const tab = this.tabManager.getTab(tabId);
+    const docName = tab ? tab.title : 'Current Document';
+
+    const fileEl = document.createElement('div');
+    fileEl.className = 'fif-file-group';
+
+    const headerEl = document.createElement('div');
+    headerEl.className = 'fif-file-header';
+    headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${this._escapeHtml(docName)} (${matches.length})`;
+    headerEl.addEventListener('click', () => {
+      fileEl.classList.toggle('collapsed');
+      const icon = headerEl.querySelector('.fif-collapse-icon');
+      icon.textContent = fileEl.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+    });
+    fileEl.appendChild(headerEl);
+
+    const linesContainer = document.createElement('div');
+    linesContainer.className = 'fif-file-lines';
+
+    for (const match of matches) {
+      const lineEl = document.createElement('div');
+      lineEl.className = 'fif-result-line';
+
+      const lineNumSpan = `<span class="fif-line-num">${match.line}:</span> `;
+      const highlightedText = this._highlightMatches(match.text, highlightPattern);
+      lineEl.innerHTML = lineNumSpan + highlightedText;
+
+      lineEl.addEventListener('click', () => {
+        this.onResultClickCallbacks.forEach(cb => cb(null, match.line));
+      });
+      linesContainer.appendChild(lineEl);
+    }
+
+    fileEl.appendChild(linesContainer);
+    resultsEl.appendChild(fileEl);
+  }
+
+  async _searchDirectory() {
     const query = this.container.querySelector('#fif-query').value.trim();
     if (!query) return;
 
@@ -163,10 +310,6 @@ export class FindInFiles {
     const escaped = this._escapeHtml(text);
     if (!pattern) return escaped;
 
-    // We need to highlight on the escaped HTML. Re-run pattern on original text
-    // to find match positions, then apply to escaped text.
-    // Simpler approach: run replace on escaped text with an escaped version of the pattern.
-    // Safest: replace on original text, then escape each segment.
     const segments = [];
     let lastIndex = 0;
     pattern.lastIndex = 0;
@@ -230,8 +373,26 @@ export class FindInFiles {
     if (dirInput) dirInput.value = dirPath;
   }
 
-  show() {
+  show(mode) {
+    if (mode) {
+      this._setScope(mode);
+    }
+
     this.container.classList.remove('hidden');
+
+    // Pre-fill with selected text from editor
+    const editor = this.editorManager.getActiveEditor();
+    if (editor) {
+      const selection = editor.getSelection();
+      if (selection && !selection.isEmpty()) {
+        const selectedText = editor.getModel().getValueInRange(selection);
+        // Only use single-line selections for pre-fill
+        if (selectedText && !selectedText.includes('\n')) {
+          this.container.querySelector('#fif-query').value = selectedText;
+        }
+      }
+    }
+
     const input = this.container.querySelector('#fif-query');
     input.focus();
     input.select();
