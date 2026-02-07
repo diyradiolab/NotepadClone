@@ -303,6 +303,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
       label: '&Help',
       submenu: [
         {
+          label: 'SQL Query Builder Guide',
+          click: () => mainWindow.webContents.send('main:help-sql-query'),
+        },
+        { type: 'separator' },
+        {
           label: 'About NotepadClone',
           click: () => {
             const { dialog } = require('electron');

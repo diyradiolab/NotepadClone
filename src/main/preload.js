@@ -127,4 +127,7 @@ contextBridge.exposeInMainWorld('api', {
   importNotes: () => ipcRenderer.invoke('renderer:import-notes'),
   onMenuToggleNotes: (callback) => ipcRenderer.on('main:toggle-notes', callback),
   onMenuToggleTreeView: (callback) => ipcRenderer.on('main:toggle-tree-view', callback),
+
+  // Help
+  onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
 });
