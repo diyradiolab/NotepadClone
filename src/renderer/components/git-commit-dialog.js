@@ -22,10 +22,10 @@ export class GitCommitDialog {
 
     let fileListHtml = '';
     if (willCommitAll) {
-      fileListHtml = `<div class="git-commit-note">No files staged — will stage all and commit:</div>`;
+      fileListHtml = `<div class="git-commit-note">Staging and committing ${dirtyCount} file${dirtyCount !== 1 ? 's' : ''}:</div>`;
       fileListHtml += this._buildFileList(changedFiles || []);
     } else {
-      fileListHtml = `<div class="git-commit-note">Committing ${stagedCount} staged file${stagedCount !== 1 ? 's' : ''}:</div>`;
+      fileListHtml = `<div class="git-commit-note">Committing ${stagedCount} file${stagedCount !== 1 ? 's' : ''}:</div>`;
       fileListHtml += this._buildFileList(staged);
       if (unstaged.length > 0) {
         fileListHtml += `<div class="git-commit-note git-commit-note-muted">${unstaged.length} unstaged (won't be committed)</div>`;
