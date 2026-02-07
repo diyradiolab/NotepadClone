@@ -129,6 +129,16 @@ export class SqlQueryPanel {
     this.container.querySelector('#sqp-add-join').addEventListener('click', () => this._addJoinRow());
     this.container.querySelector('#sqp-add-having').addEventListener('click', () => this._addHavingRow());
 
+    // Delegated click on results table — row clicks jump to source line
+    this.container.querySelector('#sqp-results').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr.sqp-clickable');
+      if (!tr) return;
+      const lineNum = parseInt(tr.dataset.lineNum, 10);
+      if (!isNaN(lineNum)) {
+        this.onRowClickCallbacks.forEach(cb => cb(lineNum));
+      }
+    });
+
     this._initResize();
     this._addBuilderRow();
   }
@@ -1360,9 +1370,7 @@ export class SqlQueryPanel {
 
       if (lineNum != null) {
         tr.classList.add('sqp-clickable');
-        tr.addEventListener('click', () => {
-          this.onRowClickCallbacks.forEach(cb => cb(lineNum));
-        });
+        tr.dataset.lineNum = lineNum;
       }
 
       for (const col of cols) {

@@ -196,16 +196,18 @@ function updateGitUI() {
   gitPushBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
   gitPullBtn.style.display = (gitState.isRepo && gitState.hasRemote) ? '' : 'none';
 
+  // Active tab state for button visibility
+  const activeTab = tabManager.getTab(tabManager.getActiveTabId());
+  const hasActiveFile = activeTab && activeTab.filePath;
+
   // History button: visible when repo is active and active tab has a file
-  const activeTabForHistory = tabManager.getTab(tabManager.getActiveTabId());
-  gitHistoryBtn.style.display = (gitState.isRepo && activeTabForHistory && activeTabForHistory.filePath) ? '' : 'none';
+  gitHistoryBtn.style.display = (gitState.isRepo && hasActiveFile) ? '' : 'none';
 
   // Disable stage when nothing dirty
   gitStageBtn.disabled = gitState.dirtyCount === 0;
 
   // Disable stage-file when active tab has no file
-  const activeTab = tabManager.getTab(tabManager.getActiveTabId());
-  gitStageFileBtn.disabled = !activeTab || !activeTab.filePath;
+  gitStageFileBtn.disabled = !hasActiveFile;
 
   // Status bar
   if (gitState.isRepo) {

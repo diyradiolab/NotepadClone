@@ -262,11 +262,6 @@ export class EditorManager {
     if (editor) editor.trigger('keyboard', 'redo', null);
   }
 
-  find() {
-    const editor = this.getActiveEditor();
-    if (editor) editor.trigger('keyboard', 'actions.find', null);
-  }
-
   replace() {
     const editor = this.getActiveEditor();
     if (editor) editor.trigger('keyboard', 'editor.action.startFindReplaceAction', null);
