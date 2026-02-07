@@ -397,32 +397,32 @@ Register shortcuts only when a markdown file is in Edit mode using a Monaco cont
 
 ### Functional Requirements
 
-- [ ] Opening a `.md` file shows rendered HTML by default (headings, bold, lists, links, images, code blocks, tables)
-- [ ] Toggle button in toolbar switches between Read and Edit mode
-- [ ] Keyboard shortcut `Ctrl+Shift+M` toggles mode
-- [ ] Toggle button only appears when active tab is a `.md` file
-- [ ] Edit mode shows Monaco editor with markdown syntax highlighting
-- [ ] Formatting toolbar (8 buttons) appears only in Edit mode for `.md` files
-- [ ] Formatting buttons work with and without text selection
-- [ ] Relative image paths in preview resolve from the file's directory via `local-image://` protocol
-- [ ] External images (http/https) load in preview
-- [ ] Preview matches app theme (light/dark) and switches dynamically
-- [ ] Links in preview open in system browser
-- [ ] Saving from Edit mode works normally (Ctrl+S)
-- [ ] Tab dirty indicator works in Edit mode
-- [ ] Switching between tabs correctly shows/hides preview and formatting toolbar
-- [ ] Closing a markdown tab calls `markdownPreview.destroy()` for cleanup
-- [ ] Closing a markdown tab with unsaved changes shows save prompt
-- [ ] HTML in markdown is sanitized via DOMPurify with explicit allowlist
-- [ ] External file changes re-render preview when in Read mode
-- [ ] Files saved as `.md` via Save As transition to markdown mode (stay in Edit)
+- [x] Opening a `.md` file shows rendered HTML by default (headings, bold, lists, links, images, code blocks, tables)
+- [x] Toggle button in toolbar switches between Read and Edit mode
+- [x] Keyboard shortcut `Ctrl+Shift+M` toggles mode
+- [x] Toggle button only appears when active tab is a `.md` file
+- [x] Edit mode shows Monaco editor with markdown syntax highlighting
+- [x] Formatting toolbar (8 buttons) appears only in Edit mode for `.md` files
+- [x] Formatting buttons work with and without text selection
+- [x] Relative image paths in preview resolve from the file's directory via `local-image://` protocol
+- [x] External images (http/https) load in preview
+- [x] Preview matches app theme (light/dark) and switches dynamically
+- [x] Links in preview open in system browser
+- [x] Saving from Edit mode works normally (Ctrl+S)
+- [x] Tab dirty indicator works in Edit mode
+- [x] Switching between tabs correctly shows/hides preview and formatting toolbar
+- [x] Closing a markdown tab calls `markdownPreview.destroy()` for cleanup
+- [x] Closing a markdown tab with unsaved changes shows save prompt
+- [x] HTML in markdown is sanitized via DOMPurify with explicit allowlist
+- [x] External file changes re-render preview when in Read mode
+- [x] Files saved as `.md` via Save As transition to markdown mode (stay in Edit)
 
 ### Edge Cases
 
-- [ ] Unsaved new files (no filePath) show preview; images with relative paths show broken icon gracefully
-- [ ] Tab dirty state preserved across Read/Edit toggles
-- [ ] Monaco undo history preserved across Read/Edit toggles (model persists)
-- [ ] Monaco viewState (cursor, scroll) restored when toggling back to Edit
+- [x] Unsaved new files (no filePath) show preview; images with relative paths show broken icon gracefully
+- [x] Tab dirty state preserved across Read/Edit toggles
+- [x] Monaco undo history preserved across Read/Edit toggles (model persists)
+- [x] Monaco viewState (cursor, scroll) restored when toggling back to Edit
 
 ## Dependencies & Risks
 
