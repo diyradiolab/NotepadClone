@@ -75,6 +75,12 @@ export class GitCommitDialog {
       if (e.key === 'Escape') this.close();
     });
 
+    // Global Escape handler
+    this._keyHandler = (e) => {
+      if (e.key === 'Escape') this.close();
+    };
+    document.addEventListener('keydown', this._keyHandler);
+
     textarea.focus();
   }
 
@@ -82,6 +88,10 @@ export class GitCommitDialog {
     if (this.overlay) {
       this.overlay.remove();
       this.overlay = null;
+    }
+    if (this._keyHandler) {
+      document.removeEventListener('keydown', this._keyHandler);
+      this._keyHandler = null;
     }
   }
 

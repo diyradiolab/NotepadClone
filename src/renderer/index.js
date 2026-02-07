@@ -1105,6 +1105,18 @@ function showGoToLineDialog() {
   input.select();
   input.focus();
 
+  // Global Escape handler
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKeyDown);
+
+  function close() {
+    overlay.remove();
+    goToLineOverlay = null;
+    document.removeEventListener('keydown', onKeyDown);
+  }
+
   function goToLine() {
     const line = parseInt(input.value, 10);
     if (line >= 1 && line <= totalLines) {
@@ -1115,11 +1127,6 @@ function showGoToLineDialog() {
     close();
   }
 
-  function close() {
-    overlay.remove();
-    goToLineOverlay = null;
-  }
-
   overlay.querySelector('#goto-line-go').addEventListener('click', goToLine);
   overlay.querySelector('#goto-line-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => {
@@ -1127,7 +1134,6 @@ function showGoToLineDialog() {
   });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') goToLine();
-    if (e.key === 'Escape') close();
   });
 }
 
