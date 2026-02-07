@@ -86,6 +86,32 @@ export class NotesPanel {
       this._renderNoteList();
     });
 
+    // Delegated click/dblclick handlers for note list items
+    const noteList = this.container.querySelector('.notes-list');
+    noteList.addEventListener('click', (e) => {
+      const pin = e.target.closest('.notes-pin');
+      if (pin) {
+        const item = pin.closest('.notes-list-item');
+        if (item) this._togglePin(item.dataset.id);
+        return;
+      }
+      const close = e.target.closest('.notes-item-close');
+      if (close) {
+        const item = close.closest('.notes-list-item');
+        if (item) this._deleteNote(item.dataset.id);
+        return;
+      }
+      const item = e.target.closest('.notes-list-item');
+      if (item) this._selectNote(item.dataset.id);
+    });
+    noteList.addEventListener('dblclick', (e) => {
+      const item = e.target.closest('.notes-list-item');
+      if (item) {
+        e.preventDefault();
+        this._startRename(item.dataset.id);
+      }
+    });
+
     // Bind textarea changes
     const textarea = this.container.querySelector('.notes-textarea');
     textarea.addEventListener('input', () => {
@@ -302,13 +328,9 @@ export class NotesPanel {
 
       const pin = document.createElement('span');
       pin.className = 'notes-pin';
-      pin.textContent = note.pinned ? '\u{1F4CC}' : '\u{1F4CC}';
+      pin.textContent = '\u{1F4CC}';
       pin.title = note.pinned ? 'Unpin' : 'Pin to top';
       pin.style.opacity = note.pinned ? '1' : '0.3';
-      pin.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._togglePin(note.id);
-      });
 
       const title = document.createElement('span');
       title.className = 'notes-item-title';
@@ -318,26 +340,10 @@ export class NotesPanel {
       close.className = 'notes-item-close';
       close.textContent = '\u00D7';
       close.title = 'Delete note';
-      close.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._deleteNote(note.id);
-      });
 
       item.appendChild(pin);
       item.appendChild(title);
       item.appendChild(close);
-
-      // Single click to select
-      item.addEventListener('click', () => {
-        this._selectNote(note.id);
-      });
-
-      // Double click to rename
-      item.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        this._startRename(note.id);
-      });
-
       list.appendChild(item);
     }
   }

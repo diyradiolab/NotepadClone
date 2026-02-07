@@ -86,6 +86,28 @@ export class FindInFiles {
 
     scopeDocBtn.addEventListener('click', () => this._setScope('document'));
     scopeDirBtn.addEventListener('click', () => this._setScope('directory'));
+
+    // Delegated click handler for results (file headers + result lines)
+    this.container.querySelector('#fif-results').addEventListener('click', (e) => {
+      // Collapse toggle on file header
+      const header = e.target.closest('.fif-file-header');
+      if (header) {
+        const group = header.closest('.fif-file-group');
+        if (group) {
+          group.classList.toggle('collapsed');
+          const icon = header.querySelector('.fif-collapse-icon');
+          icon.textContent = group.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+        }
+        return;
+      }
+      // Result line click — jump to file/line
+      const line = e.target.closest('.fif-result-line');
+      if (line) {
+        const lineNum = parseInt(line.dataset.line, 10);
+        const filePath = line.dataset.path || null;
+        this.onResultClickCallbacks.forEach(cb => cb(filePath, lineNum));
+      }
+    });
   }
 
   _setScope(scope) {
@@ -180,11 +202,6 @@ export class FindInFiles {
     const headerEl = document.createElement('div');
     headerEl.className = 'fif-file-header';
     headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${escapeHtml(docName)} (${matches.length})`;
-    headerEl.addEventListener('click', () => {
-      fileEl.classList.toggle('collapsed');
-      const icon = headerEl.querySelector('.fif-collapse-icon');
-      icon.textContent = fileEl.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
-    });
     fileEl.appendChild(headerEl);
 
     const linesContainer = document.createElement('div');
@@ -193,14 +210,12 @@ export class FindInFiles {
     for (const match of matches) {
       const lineEl = document.createElement('div');
       lineEl.className = 'fif-result-line';
+      lineEl.dataset.line = match.line;
 
       const lineNumSpan = `<span class="fif-line-num">${match.line}:</span> `;
       const highlightedText = this._highlightMatches(match.text, pattern);
       lineEl.innerHTML = lineNumSpan + highlightedText;
 
-      lineEl.addEventListener('click', () => {
-        this.onResultClickCallbacks.forEach(cb => cb(null, match.line));
-      });
       linesContainer.appendChild(lineEl);
     }
 
@@ -272,11 +287,6 @@ export class FindInFiles {
       const headerEl = document.createElement('div');
       headerEl.className = 'fif-file-header';
       headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${escapeHtml(shortPath)} (${matches.length})`;
-      headerEl.addEventListener('click', () => {
-        fileEl.classList.toggle('collapsed');
-        const icon = headerEl.querySelector('.fif-collapse-icon');
-        icon.textContent = fileEl.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
-      });
       fileEl.appendChild(headerEl);
 
       const linesContainer = document.createElement('div');
@@ -285,14 +295,13 @@ export class FindInFiles {
       for (const match of matches) {
         const lineEl = document.createElement('div');
         lineEl.className = 'fif-result-line';
+        lineEl.dataset.line = match.line;
+        lineEl.dataset.path = match.filePath;
 
         const lineNumSpan = `<span class="fif-line-num">${match.line}:</span> `;
         const highlightedText = this._highlightMatches(match.text, highlightPattern);
         lineEl.innerHTML = lineNumSpan + highlightedText;
 
-        lineEl.addEventListener('click', () => {
-          this.onResultClickCallbacks.forEach(cb => cb(match.filePath, match.line));
-        });
         linesContainer.appendChild(lineEl);
       }
 
