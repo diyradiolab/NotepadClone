@@ -477,12 +477,6 @@ function toggleTableMode() {
   }
 }
 
-function isTableExtension(filename) {
-  if (!filename) return false;
-  const lower = filename.toLowerCase();
-  return lower.endsWith('.csv') || lower.endsWith('.tsv');
-}
-
 // ── Tree Viewer ──
 
 const treeToggleBtn = document.getElementById('btn-tree-toggle');
@@ -822,28 +816,22 @@ function createTabForFile(file) {
   const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
   tabManager.setFilePath(tabId, file.filePath);
   const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
+  const tab = tabManager.getTab(tabId);
 
   // Detect markdown files — default to read mode
   if (isMarkdownFile(filename)) {
-    const tab = tabManager.getTab(tabId);
     tab.isMarkdown = true;
     tab.markdownMode = 'read';
   }
 
   // Detect table files — default to table mode
-  if (isTableExtension(filename)) {
-    const tab = tabManager.getTab(tabId);
+  const tableCheck = isTableFile(filename);
+  if (tableCheck === true) {
     tab.isTableFile = true;
     tab.tableMode = 'table';
-  } else if (filename.toLowerCase().endsWith('.json')) {
-    if (isTableJSON(file.content)) {
-      const tab = tabManager.getTab(tabId);
-      tab.isTableFile = true;
-      tab.tableMode = 'table';
-    }
-  } else if (filename.toLowerCase().endsWith('.xml')) {
-    if (isTableXML(file.content)) {
-      const tab = tabManager.getTab(tabId);
+  } else if (tableCheck === 'maybe') {
+    if ((filename.toLowerCase().endsWith('.json') && isTableJSON(file.content)) ||
+        (filename.toLowerCase().endsWith('.xml') && isTableXML(file.content))) {
       tab.isTableFile = true;
       tab.tableMode = 'table';
     }
@@ -851,7 +839,6 @@ function createTabForFile(file) {
 
   // Detect tree files (JSON/XML) — default to tree if not table-compatible
   if (isTreeFile(filename)) {
-    const tab = tabManager.getTab(tabId);
     tab.isTreeFile = true;
     tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
   }
@@ -860,8 +847,7 @@ function createTabForFile(file) {
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  const activeTab = tabManager.getTab(tabId);
-  if (!isMarkdownFile(filename) && !(activeTab && activeTab.isTableFile) && !(activeTab && activeTab.isTreeFile && activeTab.treeMode === 'tree')) {
+  if (!tab.isMarkdown && !tab.isTableFile && !(tab.isTreeFile && tab.treeMode === 'tree')) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
