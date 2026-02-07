@@ -16,6 +16,7 @@ export class TabManager {
 
     this._draggedTabId = null;
     this._initContextMenu();
+    this._initTabBarDrop();
   }
 
   createTab(title = 'new 1', filePath = null, encoding = 'UTF-8') {
@@ -228,6 +229,30 @@ export class TabManager {
     });
 
     this.tabBar.appendChild(el);
+  }
+
+  // ── Tab Bar Drop (for dropping into empty space after last tab) ──
+
+  _initTabBarDrop() {
+    this.tabBar.addEventListener('dragover', (e) => {
+      if (!this._draggedTabId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+
+    this.tabBar.addEventListener('drop', (e) => {
+      if (!this._draggedTabId) return;
+      e.preventDefault();
+
+      // Only act if the drop target is the tab bar itself (empty space),
+      // not a child tab element (those have their own handlers)
+      if (e.target !== this.tabBar) return;
+
+      const draggedEl = this.tabBar.querySelector(`[data-tab-id="${this._draggedTabId}"]`);
+      if (draggedEl) {
+        this.tabBar.appendChild(draggedEl);
+      }
+    });
   }
 
   // ── Context Menu ──
