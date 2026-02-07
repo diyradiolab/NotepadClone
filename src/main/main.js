@@ -639,3 +639,23 @@ ipcMain.handle('renderer:get-notes-data', async () => {
 ipcMain.handle('renderer:save-notes-data', async (_event, data) => {
   store.set('notesPanel', data);
 });
+
+ipcMain.handle('renderer:export-notes', async (_event, notes) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: 'notes-export.json',
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return { success: false };
+  await fs.promises.writeFile(result.filePath, JSON.stringify(notes, null, 2), 'utf-8');
+  return { success: true, filePath: result.filePath };
+});
+
+ipcMain.handle('renderer:import-notes', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return null;
+  const raw = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+  return JSON.parse(raw);
+});

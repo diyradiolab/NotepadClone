@@ -55,6 +55,8 @@ export class NotesPanel {
       <div class="notes-resize"></div>
       <div class="notes-header">
         <span class="notes-header-title">NOTES</span>
+        <button class="notes-header-btn" id="notes-import-btn" title="Import Notes">&#8615;</button>
+        <button class="notes-header-btn" id="notes-export-btn" title="Export Notes">&#8613;</button>
         <button class="notes-header-btn" id="notes-add-btn" title="New Note">+</button>
       </div>
       <div class="notes-search">
@@ -64,9 +66,15 @@ export class NotesPanel {
       <textarea class="notes-textarea" placeholder="Select or create a note..."></textarea>
     `;
 
-    // Bind header add button
+    // Bind header buttons
     this.container.querySelector('#notes-add-btn').addEventListener('click', () => {
       this._createNote();
+    });
+    this.container.querySelector('#notes-export-btn').addEventListener('click', () => {
+      this._exportNotes();
+    });
+    this.container.querySelector('#notes-import-btn').addEventListener('click', () => {
+      this._importNotes();
     });
 
     // Bind search
@@ -429,6 +437,54 @@ export class NotesPanel {
       }
     };
     document.addEventListener('keydown', onKeyDown);
+  }
+
+  // ── Export / Import ──
+
+  async _exportNotes() {
+    if (this.notes.length === 0) return;
+    this.flushSave();
+    await window.api.exportNotes(this.notes);
+  }
+
+  async _importNotes() {
+    let imported;
+    try {
+      imported = await window.api.importNotes();
+    } catch {
+      return; // invalid JSON or dialog cancelled
+    }
+    if (!imported || !Array.isArray(imported) || imported.length === 0) return;
+
+    // Validate each note has required fields
+    const valid = imported.filter(n => n && typeof n.title === 'string' && typeof n.content === 'string');
+    if (valid.length === 0) return;
+
+    // Merge: add imported notes, skip duplicates by title+content match
+    let added = 0;
+    for (const imp of valid) {
+      const exists = this.notes.some(n => n.title === imp.title && n.content === imp.content);
+      if (!exists) {
+        this.notes.push({
+          id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: imp.title,
+          content: imp.content,
+          pinned: imp.pinned || false,
+          createdAt: imp.createdAt || Date.now(),
+        });
+        added++;
+      }
+    }
+
+    if (added > 0) {
+      // Select first imported note if none active
+      if (!this.activeNoteId) {
+        this.activeNoteId = this.notes[this.notes.length - 1].id;
+      }
+      this._renderNoteList();
+      this._showActiveNote();
+      this._debounceSave();
+    }
   }
 
   // ── Util ──

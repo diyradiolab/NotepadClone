@@ -123,5 +123,7 @@ contextBridge.exposeInMainWorld('api', {
   // Notes panel
   getNotesData: () => ipcRenderer.invoke('renderer:get-notes-data'),
   saveNotesData: (data) => ipcRenderer.invoke('renderer:save-notes-data', data),
+  exportNotes: (notes) => ipcRenderer.invoke('renderer:export-notes', notes),
+  importNotes: () => ipcRenderer.invoke('renderer:import-notes'),
   onMenuToggleNotes: (callback) => ipcRenderer.on('main:toggle-notes', callback),
 });
