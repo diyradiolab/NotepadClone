@@ -264,8 +264,8 @@
 }
 
 .notes-confirm-buttons button.danger {
-  background: #e81123;
-  border-color: #e81123;
+  background: var(--tab-close-hover-bg);
+  border-color: var(--tab-close-hover-bg);
   color: #ffffff;
 }
 

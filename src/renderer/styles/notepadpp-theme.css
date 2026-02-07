@@ -19,7 +19,7 @@
 
 /* Gutter / line numbers area styling */
 .monaco-editor .margin {
-  background: #f0f0f0 !important;
+  background: var(--bg-primary) !important;
 }
 
 /* Current line highlight — subtle blue like Notepad++ */

@@ -410,7 +410,7 @@
 
 .sqp-mode-toggle.sqp-mode-active {
   background: var(--input-border-focus);
-  color: #fff;
+  color: #ffffff;
   border-color: var(--input-border-focus);
 }
 

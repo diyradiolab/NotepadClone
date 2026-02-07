@@ -236,20 +236,3 @@
 
 /* ── Scrollbar styling ── */
 
-.tree-viewer-wrapper::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.tree-viewer-wrapper::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-
-.tree-viewer-wrapper::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 4px;
-}
-
-.tree-viewer-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
-}
