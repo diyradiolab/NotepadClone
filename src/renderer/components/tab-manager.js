@@ -18,7 +18,7 @@ export class TabManager {
 
     this._draggedTabId = null;
     this._initContextMenu();
-    this._initTabBarDrop();
+    this._initTabBarEvents();
   }
 
   createTab(title = 'new 1', filePath = null, encoding = 'UTF-8') {
@@ -171,88 +171,88 @@ export class TabManager {
       <button class="tab-close" title="Close">\u00D7</button>
     `;
 
-    el.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('tab-close')) {
+    this.tabBar.appendChild(el);
+  }
+
+  // ── Delegated Tab Bar Events ──
+
+  _initTabBarEvents() {
+    // Click: activate tab or close tab
+    this.tabBar.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      const tabId = tab.dataset.tabId;
+
+      if (e.target.closest('.tab-close')) {
+        e.stopPropagation();
+        this.closeTab(tabId);
+      } else {
         this.activate(tabId);
       }
     });
 
-    el.querySelector('.tab-close').addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.closeTab(tabId);
-    });
-
     // Context menu
-    el.addEventListener('contextmenu', (e) => {
+    this.tabBar.addEventListener('contextmenu', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
       e.preventDefault();
-      this._showContextMenu(e.clientX, e.clientY, tabId);
+      this._showContextMenu(e.clientX, e.clientY, tab.dataset.tabId);
     });
 
     // Drag reordering
-    el.addEventListener('dragstart', (e) => {
-      this._draggedTabId = tabId;
-      el.classList.add('dragging');
+    this.tabBar.addEventListener('dragstart', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      this._draggedTabId = tab.dataset.tabId;
+      tab.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
     });
 
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
+    this.tabBar.addEventListener('dragend', (e) => {
+      const tab = e.target.closest('.tab');
+      if (tab) tab.classList.remove('dragging');
       this._draggedTabId = null;
       this.tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
     });
 
-    el.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (this._draggedTabId && this._draggedTabId !== tabId) {
-        el.classList.add('drag-over');
-      }
-    });
-
-    el.addEventListener('dragleave', () => {
-      el.classList.remove('drag-over');
-    });
-
-    el.addEventListener('drop', (e) => {
-      e.preventDefault();
-      el.classList.remove('drag-over');
-      if (!this._draggedTabId || this._draggedTabId === tabId) return;
-
-      const draggedEl = this.tabBar.querySelector(`[data-tab-id="${this._draggedTabId}"]`);
-      if (!draggedEl) return;
-
-      const rect = el.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      if (e.clientX < midX) {
-        this.tabBar.insertBefore(draggedEl, el);
-      } else {
-        this.tabBar.insertBefore(draggedEl, el.nextSibling);
-      }
-    });
-
-    this.tabBar.appendChild(el);
-  }
-
-  // ── Tab Bar Drop (for dropping into empty space after last tab) ──
-
-  _initTabBarDrop() {
     this.tabBar.addEventListener('dragover', (e) => {
       if (!this._draggedTabId) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
+      const tab = e.target.closest('.tab');
+      if (tab && tab.dataset.tabId !== this._draggedTabId) {
+        tab.classList.add('drag-over');
+      }
+    });
+
+    this.tabBar.addEventListener('dragleave', (e) => {
+      const tab = e.target.closest('.tab');
+      if (tab) tab.classList.remove('drag-over');
     });
 
     this.tabBar.addEventListener('drop', (e) => {
       if (!this._draggedTabId) return;
       e.preventDefault();
 
-      // Only act if the drop target is the tab bar itself (empty space),
-      // not a child tab element (those have their own handlers)
-      if (e.target !== this.tabBar) return;
+      const tab = e.target.closest('.tab');
+      if (tab) {
+        tab.classList.remove('drag-over');
+        if (tab.dataset.tabId === this._draggedTabId) return;
 
-      const draggedEl = this.tabBar.querySelector(`[data-tab-id="${this._draggedTabId}"]`);
-      if (draggedEl) {
-        this.tabBar.appendChild(draggedEl);
+        const draggedEl = this.tabBar.querySelector(`[data-tab-id="${this._draggedTabId}"]`);
+        if (!draggedEl) return;
+
+        const rect = tab.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        if (e.clientX < midX) {
+          this.tabBar.insertBefore(draggedEl, tab);
+        } else {
+          this.tabBar.insertBefore(draggedEl, tab.nextSibling);
+        }
+      } else if (e.target === this.tabBar) {
+        // Drop into empty space after last tab
+        const draggedEl = this.tabBar.querySelector(`[data-tab-id="${this._draggedTabId}"]`);
+        if (draggedEl) this.tabBar.appendChild(draggedEl);
       }
     });
   }
