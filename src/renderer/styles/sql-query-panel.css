@@ -90,6 +90,42 @@
   border-color: var(--input-border-focus);
 }
 
+/* Tables reference bar (multi-table JSON) */
+.sqp-tables-ref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.sqp-tables-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sqp-table-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sqp-table-chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--input-border-focus);
+}
+
 .sqp-query-bar {
   display: flex;
   align-items: stretch;

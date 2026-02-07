@@ -62,7 +62,34 @@ recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
 sqlQueryPanel.onRowClick((lineNumber) => {
   const tabId = tabManager.getActiveTabId();
-  if (tabId) editorManager.revealLine(tabId, lineNumber);
+  if (!tabId) return;
+  const tab = tabManager.getTab(tabId);
+
+  // If tab is in table/tree/markdown mode, switch to editor first
+  if (tab && tab.isTableFile && tab.tableMode === 'table') {
+    tab.tableMode = 'edit';
+    tableViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateTableToolbar(true, 'edit');
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
+    tab.treeMode = 'edit';
+    treeViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateTreeToolbar(true, 'edit');
+    updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
+    tab.markdownMode = 'edit';
+    editorManager.activateTab(tabId);
+    updateMarkdownToolbar(true, 'edit');
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  }
+
+  editorManager.revealLine(tabId, lineNumber);
 });
 
 tableViewer.onRowClick((lineNumber) => {

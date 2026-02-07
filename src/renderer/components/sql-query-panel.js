@@ -46,6 +46,7 @@ export class SqlQueryPanel {
         <input type="text" class="sqp-custom-regex" id="sqp-custom-regex" placeholder="e.g. ::" style="display:none" />
         <label><input type="checkbox" id="sqp-header"> First line as header</label>
       </div>
+      <div class="sqp-tables-ref" id="sqp-tables-ref" style="display:none"></div>
       <div class="sqp-builder" id="sqp-builder">
         <div class="sqp-builder-header">
           <button class="sqp-builder-toggle" id="sqp-builder-toggle" title="Collapse/expand builder">&#9660;</button>
@@ -139,6 +140,16 @@ export class SqlQueryPanel {
       }
     });
 
+    // Delegated click on tables reference bar — chip clicks insert SELECT query
+    this.container.querySelector('#sqp-tables-ref').addEventListener('click', (e) => {
+      const chip = e.target.closest('.sqp-table-chip');
+      if (!chip) return;
+      const tableName = chip.dataset.tableName;
+      if (tableName) {
+        this.container.querySelector('#sqp-query').value = `SELECT * FROM [${tableName}] LIMIT 100`;
+      }
+    });
+
     this._initResize();
     this._addBuilderRow();
   }
@@ -219,8 +230,13 @@ export class SqlQueryPanel {
     const content = this.editorManager.getContent(tabId);
     if (!content || content.trim().length === 0) return;
 
-    const { columns } = this._parseContent(content, tab.title);
-    this.builderColumns = columns;
+    const parsed = this._parseContent(content, tab.title);
+    this.builderColumns = parsed.columns;
+
+    // Multi-table: show tables reference bar, store tables for _executeQuery
+    this._lastParsedTables = parsed.tables || null;
+    this._lastPrimaryTableName = parsed.primaryTableName || null;
+    this._updateTablesRef(parsed.tables);
 
     this._updateColumnDropdowns();
 
@@ -736,6 +752,29 @@ export class SqlQueryPanel {
     });
   }
 
+  // ── Tables Reference Bar (multi-table JSON) ──
+
+  _updateTablesRef(tables) {
+    const ref = this.container.querySelector('#sqp-tables-ref');
+    if (!tables || Object.keys(tables).length <= 1) {
+      ref.style.display = 'none';
+      ref.innerHTML = '';
+      return;
+    }
+
+    ref.style.display = '';
+    ref.innerHTML = '<span class="sqp-tables-label">Tables:</span>';
+
+    for (const [name, tbl] of Object.entries(tables)) {
+      const chip = document.createElement('button');
+      chip.className = 'sqp-table-chip';
+      chip.textContent = `${name} (${tbl.data.length})`;
+      chip.title = tbl.columns.join(', ');
+      chip.dataset.tableName = name;
+      ref.appendChild(chip);
+    }
+  }
+
   // ── HAVING Section ──
 
   _addHavingRow() {
@@ -891,7 +930,12 @@ export class SqlQueryPanel {
       }
     }
 
-    // Build SQL
+    // Build SQL — always include _num for row-click navigation (unless aggregate/group)
+    const hasAggregates = groupByParts.length > 0;
+    if (selectParts.length > 0 && !hasAggregates && !hasJoins &&
+        !selectParts.some(p => p === '_num' || p.startsWith('_num '))) {
+      selectParts.unshift('_num');
+    }
     const selectClause = selectParts.length > 0 ? selectParts.join(', ') : '*';
     let sql;
 
@@ -1074,6 +1118,165 @@ export class SqlQueryPanel {
     return { data, columns };
   }
 
+  // ── Nested JSON multi-table flattening ──
+
+  /**
+   * Detect nested JSON and flatten into multiple relational tables with foreign keys.
+   * Returns { tableName: { data: [...], columns: [...] } } or null if JSON is flat.
+   */
+  _flattenNestedJSON(content, parsed) {
+    // Find root array
+    let arr = null;
+    let tableName = 'data';
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      arr = parsed;
+    } else if (typeof parsed === 'object' && parsed !== null) {
+      arr = this._findLargestObjectArray(parsed);
+    }
+
+    if (!arr || arr.length === 0) return null;
+    // Ensure all elements are objects
+    if (!arr.every(item => typeof item === 'object' && item !== null && !Array.isArray(item))) return null;
+
+    // Single-key wrapper detection: [{employee: {...}}, ...] → unwrap
+    const firstKeys = Object.keys(arr[0]);
+    if (firstKeys.length === 1 && typeof arr[0][firstKeys[0]] === 'object' && !Array.isArray(arr[0][firstKeys[0]])) {
+      const wrapperKey = firstKeys[0];
+      const allWrap = arr.every(item => {
+        const keys = Object.keys(item);
+        return keys.length === 1 && keys[0] === wrapperKey && typeof item[wrapperKey] === 'object' && !Array.isArray(item[wrapperKey]);
+      });
+      if (allWrap) {
+        arr = arr.map(item => item[wrapperKey]);
+        tableName = wrapperKey;
+      }
+    }
+
+    const tables = {};
+    this._processArray(arr, tableName, null, null, tables);
+
+    // If only one table was produced, no nesting was detected
+    if (Object.keys(tables).length <= 1) {
+      // Check if the single table has no nested data — just return null for flat
+      const tbl = tables[tableName];
+      if (tbl) return null;
+      return null;
+    }
+
+    // Add _num (source line number) and _index to root table
+    const lineMap = this._buildJSONLineMap(content, arr.length);
+    const rootTable = tables[tableName];
+    if (rootTable) {
+      rootTable.data.forEach((row, idx) => {
+        row._num = lineMap[idx] || (idx + 1);
+        row._index = idx;
+      });
+      if (!rootTable.columns.includes('_num')) rootTable.columns.unshift('_num');
+      if (!rootTable.columns.includes('_index')) rootTable.columns.splice(1, 0, '_index');
+    }
+
+    return tables;
+  }
+
+  /**
+   * Core recursive flattener. Processes an array of objects into a table,
+   * detecting child arrays to create linked child tables.
+   */
+  _processArray(arr, tableName, fkName, fkValues, tables) {
+    const columnSet = new Set();
+    const rows = [];
+    // Collect child arrays to recurse into after processing all rows
+    const pendingChildren = []; // [{arr, childTableName, fkName, fkValues}]
+
+    for (let i = 0; i < arr.length; i++) {
+      const obj = arr[i];
+      if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) continue;
+
+      const row = {};
+      // Add FK column if this is a child table
+      if (fkName && fkValues) {
+        row[fkName] = fkValues[i];
+        columnSet.add(fkName);
+      }
+
+      // Detect ID field for this object
+      const idField = this._findIdField(obj);
+
+      const childArrays = []; // [{key, arr, parentIdField, parentIdValue}]
+      this._flattenFields(obj, '', row, columnSet, childArrays, idField, idField ? obj[idField] : i, tableName);
+
+      rows.push(row);
+
+      // Buffer child arrays with FK values
+      for (const child of childArrays) {
+        // Find or create the pending child entry
+        let pending = pendingChildren.find(p => p.childTableName === child.key);
+        if (!pending) {
+          // FK naming: _parentIdField, or _row if no ID field found on parent
+          const fk = child.parentIdField ? `_${child.parentIdField}` : '_row';
+          pending = { arr: [], childTableName: child.key, fkName: fk, fkValues: [] };
+          pendingChildren.push(pending);
+        }
+        for (const item of child.arr) {
+          pending.arr.push(item);
+          pending.fkValues.push(child.parentIdValue);
+        }
+      }
+    }
+
+    tables[tableName] = { data: rows, columns: Array.from(columnSet) };
+
+    // Recurse into child arrays
+    for (const child of pendingChildren) {
+      this._processArray(child.arr, child.childTableName, child.fkName, child.fkValues, tables);
+    }
+  }
+
+  /**
+   * Walk an object's fields, flattening scalars and nested objects into the row,
+   * and buffering child arrays for separate table creation.
+   */
+  _flattenFields(obj, prefix, row, columnSet, childArrays, parentIdField, parentIdValue, parentTableName) {
+    for (const [key, val] of Object.entries(obj)) {
+      const colName = prefix ? `${prefix}_${key}` : key;
+
+      if (val === null || val === undefined) {
+        row[colName] = null;
+        columnSet.add(colName);
+      } else if (Array.isArray(val)) {
+        if (val.length === 0) continue;
+        // Array of objects → child table
+        if (typeof val[0] === 'object' && val[0] !== null && !Array.isArray(val[0])) {
+          childArrays.push({ key, arr: val, parentIdField: parentIdField, parentIdValue: parentIdValue });
+        } else {
+          // Array of scalars → child table with {value: item} rows
+          const wrapped = val.map(item => ({ value: item }));
+          childArrays.push({ key, arr: wrapped, parentIdField: parentIdField, parentIdValue: parentIdValue });
+        }
+      } else if (typeof val === 'object') {
+        // Nested object → flatten with prefix
+        this._flattenFields(val, colName, row, columnSet, childArrays, parentIdField, parentIdValue, parentTableName);
+      } else {
+        // Scalar — preserve original type (number, string, boolean)
+        row[colName] = val;
+        columnSet.add(colName);
+      }
+    }
+  }
+
+  /**
+   * Find the best ID field in an object: 'id' first, then any field ending in 'Id' or '_id'.
+   */
+  _findIdField(obj) {
+    const keys = Object.keys(obj);
+    if (keys.includes('id')) return 'id';
+    for (const k of keys) {
+      if (k.endsWith('Id') || k.endsWith('_id')) return k;
+    }
+    return null;
+  }
+
   // ── JSON structured parsing (array of objects → rows) ──
 
   _parseJSONContent(content) {
@@ -1084,8 +1287,16 @@ export class SqlQueryPanel {
       return null;
     }
 
-    // If root is an array of objects, use it directly.
-    // Otherwise, search recursively for the largest array of objects.
+    // Try multi-table nested flattening first
+    const tables = this._flattenNestedJSON(content, parsed);
+    if (tables && Object.keys(tables).length > 1) {
+      // Multi-table: return primary table data + full tables map
+      const primaryName = Object.keys(tables)[0];
+      const primary = tables[primaryName];
+      return { data: primary.data, columns: primary.columns, tables, primaryTableName: primaryName };
+    }
+
+    // Single table or flat JSON — use existing flat logic
     let arr = null;
     if (Array.isArray(parsed) && parsed.length > 0) {
       arr = parsed;
@@ -1275,48 +1486,73 @@ export class SqlQueryPanel {
       return;
     }
 
-    const { data, columns } = this._parseContent(content, tab.title);
+    const parsed = this._parseContent(content, tab.title);
+    const { data, columns } = parsed;
     if (data.length === 0) {
       this._setStatus('No data rows found.', true);
       return;
     }
 
-    // Build params array — main data first, then join data
-    const hasJoins = this.advancedMode && this.joinData.some(j => j.tabId && j.leftCol && j.rightCol && j.data);
-    const params = [data];
-
-    if (hasJoins) {
-      // Replace FROM data → FROM ? only if not already using ? syntax from join generation
-      if (!/FROM\s+\?/i.test(sql)) {
-        sql = sql.replace(/\bFROM\s+data\b/gi, 'FROM ?');
-      }
-      for (const join of this.joinData) {
-        if (join.tabId && join.leftCol && join.rightCol && join.data) {
-          params.push(join.data);
-        } else if (join.tabId && (!join.data)) {
-          // Joined tab has no data — check if tab still exists
-          const jTab = this.tabManager.getTab(join.tabId);
-          if (!jTab) {
-            this._setStatus('Error: A joined tab has been closed.', true);
-            return;
-          }
-          this._setStatus('Error: A joined tab has no parseable data.', true);
-          return;
-        }
-      }
-    } else {
-      // Basic mode or no joins — replace FROM data → FROM ?
-      sql = sql.replace(/\bFROM\s+data\b/gi, 'FROM ?');
-    }
+    const isMultiTable = parsed.tables && Object.keys(parsed.tables).length > 1;
 
     const t0 = performance.now();
     let results;
-    try {
-      results = alasql(sql, params);
-    } catch (err) {
-      this._setStatus(`Error: ${err.message}`, true);
-      return;
+
+    if (isMultiTable) {
+      // Multi-table path: register all tables in alasql, execute SQL directly
+      const tableNames = Object.keys(parsed.tables);
+      try {
+        for (const name of tableNames) {
+          alasql(`CREATE TABLE IF NOT EXISTS [${name}]`);
+          alasql.tables[name].data = parsed.tables[name].data;
+        }
+        results = alasql(sql);
+      } catch (err) {
+        this._setStatus(`Error: ${err.message}`, true);
+        return;
+      } finally {
+        for (const name of tableNames) {
+          try { alasql(`DROP TABLE IF EXISTS [${name}]`); } catch { /* ignore */ }
+        }
+      }
+    } else {
+      // Single-table path (existing logic)
+      // Build params array — main data first, then join data
+      const hasJoins = this.advancedMode && this.joinData.some(j => j.tabId && j.leftCol && j.rightCol && j.data);
+      const params = [data];
+
+      if (hasJoins) {
+        // Replace FROM data → FROM ? only if not already using ? syntax from join generation
+        if (!/FROM\s+\?/i.test(sql)) {
+          sql = sql.replace(/\bFROM\s+data\b/gi, 'FROM ?');
+        }
+        for (const join of this.joinData) {
+          if (join.tabId && join.leftCol && join.rightCol && join.data) {
+            params.push(join.data);
+          } else if (join.tabId && (!join.data)) {
+            // Joined tab has no data — check if tab still exists
+            const jTab = this.tabManager.getTab(join.tabId);
+            if (!jTab) {
+              this._setStatus('Error: A joined tab has been closed.', true);
+              return;
+            }
+            this._setStatus('Error: A joined tab has no parseable data.', true);
+            return;
+          }
+        }
+      } else {
+        // Basic mode or no joins — replace FROM data → FROM ?
+        sql = sql.replace(/\bFROM\s+data\b/gi, 'FROM ?');
+      }
+
+      try {
+        results = alasql(sql, params);
+      } catch (err) {
+        this._setStatus(`Error: ${err.message}`, true);
+        return;
+      }
     }
+
     const elapsed = (performance.now() - t0).toFixed(1);
 
     if (!Array.isArray(results)) {

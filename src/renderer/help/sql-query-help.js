@@ -34,7 +34,7 @@ JSON files are parsed structurally — no delimiter needed:
 - **Array of objects** (\`[{...}, {...}]\`): Each object becomes a row
 - **Nested JSON**: The builder automatically finds the largest array of objects within the structure
 
-### Example: Nested JSON
+### Example: Flat / Simple Nested JSON
 \`\`\`json
 {
   "company": {
@@ -46,6 +46,52 @@ JSON files are parsed structurally — no delimiter needed:
 }
 \`\`\`
 \`SELECT * FROM data\` returns the \`departments\` array as rows with columns \`id\` and \`name\`.
+
+### Multi-Table Nested JSON
+
+When JSON contains deeply nested arrays of objects, the builder automatically flattens them into **multiple relational tables** linked by foreign keys.
+
+**How it works:**
+- Each nested array of objects becomes its own table (e.g. \`projects\`, \`tasks\`)
+- A **table chips bar** appears showing all detected tables with row counts — click a chip to preview that table
+- Nested objects flatten into \`prefix_field\` columns (e.g. a \`department.manager.name\` field becomes \`department_manager_name\`)
+- Nested arrays become child tables linked by FK columns (e.g. \`_id\`, \`_projectId\`)
+- Scalar arrays (e.g. \`["Java", "Go"]\`) become child tables with a \`value\` column
+- The root table gets \`_num\` (source line number) and \`_index\` columns; child tables do not
+
+**FK convention:** The FK column is named after the parent's ID field with a \`_\` prefix. If the parent has an \`id\` field, children get \`_id\`. If the parent has \`projectId\`, children get \`_projectId\`. If no ID field is found, the FK defaults to \`_row\` (the parent's array index).
+
+## Multi-Table JSON Queries
+
+Once a multi-table JSON is loaded, you can query any table by name and JOIN across them.
+
+**Query a specific table:**
+\`\`\`sql
+SELECT * FROM [projects]
+\`\`\`
+
+**JOIN across tables:**
+\`\`\`sql
+SELECT d.name, p.title, t.task
+FROM [data] d
+JOIN [projects] p ON d.id = p._id
+JOIN [tasks] t ON p.projectId = t._projectId
+\`\`\`
+
+**Filter a child table:**
+\`\`\`sql
+SELECT * FROM [technologiesUsed] WHERE value = 'Go'
+\`\`\`
+
+**Aggregate across tables:**
+\`\`\`sql
+SELECT d.name, COUNT(p.title) AS project_count
+FROM [data] d
+JOIN [projects] p ON d.id = p._id
+GROUP BY d.name
+\`\`\`
+
+> **Note:** Wrap table names in \`[brackets]\` when they contain special characters or could conflict with SQL keywords. \`FROM data\` (no brackets) also works for the root table.
 
 ## XML Support
 
@@ -263,6 +309,38 @@ Sales,150000,Frank
 }
 \`\`\`
 
+### multi-table.json (multi-table nested)
+\`\`\`json
+[
+  {
+    "id": 1, "name": "Alice", "department": { "name": "Engineering", "floor": 3 },
+    "projects": [
+      { "projectId": 101, "title": "Backend API",
+        "tasks": [
+          { "task": "Design schema", "status": "done" },
+          { "task": "Write endpoints", "status": "in-progress" }
+        ],
+        "technologiesUsed": ["Go", "PostgreSQL"]
+      },
+      { "projectId": 102, "title": "CLI Tool",
+        "tasks": [{ "task": "Argument parser", "status": "done" }],
+        "technologiesUsed": ["Rust"]
+      }
+    ]
+  },
+  {
+    "id": 2, "name": "Bob", "department": { "name": "Marketing", "floor": 2 },
+    "projects": [
+      { "projectId": 201, "title": "Campaign Site",
+        "tasks": [{ "task": "Landing page", "status": "in-progress" }],
+        "technologiesUsed": ["React", "CSS"]
+      }
+    ]
+  }
+]
+\`\`\`
+Produces tables: **data** (2 rows), **projects** (3), **tasks** (4), **technologiesUsed** (5).
+
 ## Quick Recipes
 
 **Top 5 highest salaries:**
@@ -286,6 +364,15 @@ WHERE d.salary > da.avg
 **Search log lines containing "ERROR":**
 \`\`\`sql
 SELECT _num, _line FROM data WHERE _line LIKE '%ERROR%'
+\`\`\`
+
+**Multi-table JSON — list all tasks with employee and project names:**
+\`\`\`sql
+SELECT d.name AS employee, p.title AS project, t.task, t.status
+FROM [data] d
+JOIN [projects] p ON d.id = p._id
+JOIN [tasks] t ON p.projectId = t._projectId
+ORDER BY d.name, p.title
 \`\`\`
 
 ---
