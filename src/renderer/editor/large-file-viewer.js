@@ -18,6 +18,7 @@ export class LargeFileViewer {
     this.fetchingRange = null;
 
     this.onCursorCallbacks = [];
+    this.onOpenInEditorCallbacks = [];
     this._boundScrollHandler = null;
   }
 
@@ -157,7 +158,24 @@ export class LargeFileViewer {
 
   _updateStatus() {
     const sizeMB = (this.fileSize / (1024 * 1024)).toFixed(1);
-    this.statusEl.textContent = `Large file mode: ${this.totalLines.toLocaleString()} lines, ${sizeMB} MB`;
+    this.statusEl.innerHTML = '';
+    this.statusEl.style.pointerEvents = 'auto';
+
+    const text = document.createElement('span');
+    text.textContent = `Large file mode: ${this.totalLines.toLocaleString()} lines, ${sizeMB} MB`;
+    this.statusEl.appendChild(text);
+
+    const btn = document.createElement('button');
+    btn.className = 'lfv-open-in-editor-btn';
+    btn.textContent = 'Open in Editor';
+    btn.addEventListener('click', () => {
+      this.onOpenInEditorCallbacks.forEach(cb => cb());
+    });
+    this.statusEl.appendChild(btn);
+  }
+
+  onOpenInEditor(callback) {
+    this.onOpenInEditorCallbacks.push(callback);
   }
 
   scrollToLine(lineNumber) {
@@ -174,6 +192,7 @@ export class LargeFileViewer {
       this.scrollContainer.removeEventListener('scroll', this._boundScrollHandler);
     }
     this.onCursorCallbacks = [];
+    this.onOpenInEditorCallbacks = [];
     this.lineCache.clear();
     this.container.innerHTML = '';
   }

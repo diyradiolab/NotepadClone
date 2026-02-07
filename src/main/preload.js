@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld('api', {
   searchLargeFile: (filePath, query, useRegex, caseSensitive) =>
     ipcRenderer.invoke('renderer:search-large-file', { filePath, query, useRegex, caseSensitive }),
   closeLargeFile: (filePath) => ipcRenderer.invoke('renderer:close-large-file', filePath),
+  readFileFull: (filePath) => ipcRenderer.invoke('renderer:read-file-force', filePath),
+  showConfirmDialog: (message) => ipcRenderer.invoke('renderer:confirm-dialog', message),
   onLargeFileProgress: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('main:large-file-progress', handler);

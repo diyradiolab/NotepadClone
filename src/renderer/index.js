@@ -797,6 +797,40 @@ async function openLargeFile(filePath, fileSize) {
     return;
   }
 
+  // Register "Open in Editor" override
+  viewer.onOpenInEditor(async () => {
+    const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
+    const confirmed = await window.api.showConfirmDialog(
+      `This file is ${sizeMB} MB. Loading it into the editor may use significant memory and could slow down the application.\n\nContinue?`
+    );
+    if (!confirmed) return;
+
+    // Tear down the large file viewer
+    viewer.destroy();
+    largeFileViewers.delete(tabId);
+
+    // Read the full file content (bypasses size check, closes large file handle)
+    const file = await window.api.readFileFull(filePath);
+    if (!file) {
+      statusBar.showMessage('Failed to read file');
+      return;
+    }
+
+    // Clear the large file flag, set up as normal tab
+    const tab2 = tabManager.getTab(tabId);
+    tab2.isLargeFile = false;
+    tab2.encoding = file.encoding || 'UTF-8';
+
+    // Create a normal editor in the same tab
+    const filename2 = filePath.split(/[/\\]/).pop();
+    const langInfo = editorManager.createEditorForTab(tabId, file.content, filename2);
+    editorManager.activateTab(tabId);
+
+    statusBar.updateEncoding(file.encoding || 'UTF-8');
+    statusBar.updateLineEnding(file.lineEnding || 'LF');
+    statusBar.updateLanguage(langInfo.displayName);
+  });
+
   const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
   statusBar.updateEncoding('UTF-8');
   statusBar.updateLineEnding('LF');

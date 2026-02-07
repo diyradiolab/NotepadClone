@@ -596,6 +596,24 @@ ipcMain.handle('renderer:close-large-file', async (_event, filePath) => {
   return { success: true };
 });
 
+ipcMain.handle('renderer:read-file-force', async (_event, filePath) => {
+  largeFileManager.close(filePath);
+  const data = await readFile(filePath);
+  addRecentFile(filePath);
+  watchFile(filePath);
+  return data;
+});
+
+ipcMain.handle('renderer:confirm-dialog', async (_event, message) => {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Cancel', 'Continue'],
+    defaultId: 0,
+    message,
+  });
+  return response === 1;
+});
+
 // ── Git Operations ──
 
 ipcMain.handle('renderer:git-status', async (_event, dirPath) => {

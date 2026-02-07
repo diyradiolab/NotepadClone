@@ -65,6 +65,26 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   z-index: 10;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lfv-open-in-editor-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 3px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.lfv-open-in-editor-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 /* ── Loading overlay ── */
