@@ -1060,6 +1060,54 @@ export class SqlQueryPanel {
     return /\s+/; // fallback to whitespace
   }
 
+  /**
+   * Split a single CSV line into fields, respecting double-quoted values.
+   * Handles escaped quotes ("") inside quoted fields per RFC 4180.
+   * Falls back to regex split for non-string delimiters.
+   */
+  _splitCSVFields(line, delimiter) {
+    if (typeof delimiter !== 'string' || delimiter.length !== 1) {
+      return line.split(delimiter);
+    }
+
+    const fields = [];
+    let field = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < line.length) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            field += '"';
+            i += 2;
+          } else {
+            inQuotes = false;
+            i++;
+          }
+        } else {
+          field += ch;
+          i++;
+        }
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+          i++;
+        } else if (ch === delimiter) {
+          fields.push(field);
+          field = '';
+          i++;
+        } else {
+          field += ch;
+          i++;
+        }
+      }
+    }
+    fields.push(field);
+    return fields;
+  }
+
   // ── Parse content into rows ──
 
   _parseContent(content, filename) {
@@ -1090,8 +1138,8 @@ export class SqlQueryPanel {
     const useHeader = this.container.querySelector('#sqp-header').checked;
     const startIdx = useHeader ? 1 : 0;
 
-    // Determine column names
-    const firstSplit = rawLines[0].split(delimiter);
+    // Determine column names (quote-aware split)
+    const firstSplit = this._splitCSVFields(rawLines[0], delimiter);
     const colCount = firstSplit.length;
     let colNames;
     if (useHeader) {
@@ -1106,7 +1154,7 @@ export class SqlQueryPanel {
     // Build rows
     const data = [];
     for (let i = startIdx; i < rawLines.length; i++) {
-      const parts = rawLines[i].split(delimiter);
+      const parts = this._splitCSVFields(rawLines[i], delimiter);
       const row = { _num: i + 1, _line: rawLines[i] };
       for (let j = 0; j < colCount; j++) {
         row[colNames[j]] = parts[j] !== undefined ? parts[j].trim() : '';
