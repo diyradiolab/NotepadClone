@@ -225,6 +225,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'Alt+W',
           click: () => mainWindow.webContents.send('main:toggle-word-wrap'),
         },
+        {
+          label: 'Show All Characters',
+          accelerator: 'CmdOrCtrl+Shift+8',
+          click: () => mainWindow.webContents.send('main:toggle-show-all-chars'),
+        },
         { type: 'separator' },
         {
           label: 'Theme',

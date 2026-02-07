@@ -14,6 +14,8 @@ export class EditorManager {
     this.onClipboardCopyCallbacks = [];
     this.onShowClipboardHistoryCallbacks = [];
     this.columnSelectionMode = false;
+    this.showAllCharacters = false;
+    this._eolDecorations = null; // decoration collection for EOL markers
   }
 
   createEditorForTab(tabId, content = '', filename = '') {
@@ -114,6 +116,12 @@ export class EditorManager {
     });
 
     this._registerClipboardActions(editor, tabId);
+
+    // Apply show-all-characters state to newly created editor
+    if (this.showAllCharacters) {
+      editor.updateOptions({ renderWhitespace: 'all', renderControlCharacters: true });
+      this._applyEolDecorations(editor, entry.model);
+    }
 
     editor.focus();
   }
@@ -286,6 +294,71 @@ export class EditorManager {
       editor.updateOptions({ columnSelection: this.columnSelectionMode });
     }
     return this.columnSelectionMode;
+  }
+
+  toggleShowAllCharacters() {
+    this.showAllCharacters = !this.showAllCharacters;
+    const editor = this.getActiveEditor();
+    if (editor) {
+      editor.updateOptions({
+        renderWhitespace: this.showAllCharacters ? 'all' : 'none',
+        renderControlCharacters: this.showAllCharacters,
+      });
+
+      if (this.showAllCharacters) {
+        const entry = this.editors.get(this.activeTabId);
+        if (entry && !entry.isDiffTab && !entry.isHistoryTab) {
+          this._applyEolDecorations(editor, entry.model);
+        }
+      } else {
+        this._clearEolDecorations(editor);
+      }
+    }
+    return this.showAllCharacters;
+  }
+
+  _applyEolDecorations(editor, model) {
+    this._clearEolDecorations(editor);
+
+    const eolSeq = model.getEOL();
+    // Pick CSS class based on EOL type
+    const eolClass = eolSeq === '\r\n' ? 'eol-crlf' : eolSeq === '\r' ? 'eol-cr' : 'eol-lf';
+    const lineCount = model.getLineCount();
+    const decorations = [];
+
+    // Add EOL marker after every line except the last (which has no line ending)
+    for (let i = 1; i < lineCount; i++) {
+      const lineLength = model.getLineMaxColumn(i);
+      decorations.push({
+        range: new monaco.Range(i, lineLength, i, lineLength),
+        options: {
+          afterContentClassName: eolClass,
+        },
+      });
+    }
+
+    this._eolDecorationIds = editor.deltaDecorations([], decorations);
+
+    // Update decorations when content changes
+    if (this._eolContentDisposable) {
+      this._eolContentDisposable.dispose();
+    }
+    this._eolContentDisposable = model.onDidChangeContent(() => {
+      if (this.showAllCharacters) {
+        this._applyEolDecorations(editor, model);
+      }
+    });
+  }
+
+  _clearEolDecorations(editor) {
+    if (this._eolDecorationIds && editor) {
+      editor.deltaDecorations(this._eolDecorationIds, []);
+      this._eolDecorationIds = null;
+    }
+    if (this._eolContentDisposable) {
+      this._eolContentDisposable.dispose();
+      this._eolContentDisposable = null;
+    }
   }
 
   revealLine(tabId, lineNumber) {

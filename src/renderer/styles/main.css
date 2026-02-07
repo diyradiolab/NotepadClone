@@ -424,3 +424,47 @@ html, body {
 .goto-line-buttons button.primary:hover {
   opacity: 0.9;
 }
+
+/* ── EOL Markers (Show All Characters) ── */
+
+.eol-crlf::after {
+  content: 'CR LF';
+  color: #4080d0;
+  font-size: 0.6em;
+  font-weight: bold;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+  padding-left: 2px;
+}
+
+.eol-lf::after {
+  content: 'LF';
+  color: #4080d0;
+  font-size: 0.6em;
+  font-weight: bold;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+  padding-left: 2px;
+}
+
+.eol-cr::after {
+  content: 'CR';
+  color: #4080d0;
+  font-size: 0.6em;
+  font-weight: bold;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+  padding-left: 2px;
+}
+
+[data-mode-id] .eol-crlf::after,
+[data-mode-id] .eol-lf::after,
+[data-mode-id] .eol-cr::after {
+  opacity: 0.8;
+}
+
+.dark-theme .eol-crlf::after,
+.dark-theme .eol-lf::after,
+.dark-theme .eol-cr::after {
+  color: #6ab0f3;
+}

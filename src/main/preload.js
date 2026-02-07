@@ -80,6 +80,7 @@ contextBridge.exposeInMainWorld('api', {
   onMenuFind: (callback) => ipcRenderer.on('main:find', callback),
   onMenuReplace: (callback) => ipcRenderer.on('main:replace', callback),
   onMenuToggleWordWrap: (callback) => ipcRenderer.on('main:toggle-word-wrap', callback),
+  onMenuToggleShowAllChars: (callback) => ipcRenderer.on('main:toggle-show-all-chars', callback),
   onMenuToggleExplorer: (callback) => ipcRenderer.on('main:toggle-explorer', callback),
   onMenuZoomIn: (callback) => ipcRenderer.on('main:zoom-in', callback),
   onMenuZoomOut: (callback) => ipcRenderer.on('main:zoom-out', callback),

@@ -1171,6 +1171,7 @@ window.api.onMenuFind(() => editorManager.find());
 window.api.onMenuReplace(() => editorManager.replace());
 window.api.onMenuFindInFiles(() => findInFiles.toggle());
 window.api.onMenuToggleWordWrap(() => editorManager.toggleWordWrap());
+window.api.onMenuToggleShowAllChars(() => editorManager.toggleShowAllCharacters());
 window.api.onMenuToggleExplorer(() => fileExplorer.toggle());
 window.api.onMenuToggleColumnSelection(() => toggleColumnSelection());
 window.api.onMenuZoomIn(() => editorManager.zoomIn());
