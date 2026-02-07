@@ -1,0 +1,255 @@
+/* ── Tree Viewer ── */
+
+.tree-viewer-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── Controls bar ── */
+
+.tree-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.tree-viewer-btn {
+  background: var(--bg-toolbar);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tree-viewer-btn:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.tree-viewer-search {
+  flex: 1;
+  max-width: 260px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.tree-viewer-search:focus {
+  border-color: var(--input-border-focus);
+}
+
+.tree-viewer-search::placeholder {
+  color: var(--text-muted);
+}
+
+.tree-viewer-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Tree content area ── */
+
+.tree-viewer-tree {
+  padding: 4px 8px;
+}
+
+/* ── Node ── */
+
+.tree-viewer-node {
+  user-select: none;
+}
+
+.tree-viewer-row {
+  display: flex;
+  align-items: baseline;
+  padding: 1px 4px;
+  cursor: pointer;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.tree-viewer-row:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+/* ── Arrow toggle ── */
+
+.tree-viewer-arrow {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.tree-viewer-arrow:hover {
+  color: var(--text-primary);
+}
+
+.tree-viewer-arrow-placeholder {
+  display: inline-block;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+/* ── Key ── */
+
+.tree-viewer-key {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Colon separator ── */
+
+.tree-viewer-colon {
+  color: var(--text-muted);
+  margin: 0 4px;
+}
+
+/* ── Value (primitives) ── */
+
+.tree-viewer-value--string {
+  color: #ce9178;
+}
+
+.tree-viewer-value--number {
+  color: #b5cea8;
+}
+
+.tree-viewer-value--boolean {
+  color: #569cd6;
+}
+
+.tree-viewer-value--null {
+  color: #808080;
+  font-style: italic;
+}
+
+/* ── Summary for objects/arrays ── */
+
+.tree-viewer-summary {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ── Children container ── */
+
+.tree-viewer-children {
+  padding-left: 20px;
+}
+
+.tree-viewer-children.collapsed {
+  display: none;
+}
+
+/* ── XML attribute ── */
+
+.tree-viewer-attr-name {
+  color: #9cdcfe;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.tree-viewer-attr-value {
+  color: #ce9178;
+  font-size: 12px;
+}
+
+/* ── XML tag name ── */
+
+.tree-viewer-tag {
+  color: #569cd6;
+  font-weight: 600;
+}
+
+/* ── XML text content ── */
+
+.tree-viewer-text {
+  color: #d4d4d4;
+}
+
+/* ── Search filtering ── */
+
+.tree-viewer-search-match {
+  background: rgba(255, 200, 0, 0.2);
+  border-radius: 2px;
+}
+
+.tree-viewer-search-nomatch {
+  opacity: 0.3;
+}
+
+/* ── Error message ── */
+
+.tree-viewer-error {
+  padding: 20px;
+  color: #f48771;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+}
+
+.tree-viewer-error-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.tree-viewer-error-detail {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+/* ── Empty file message ── */
+
+.tree-viewer-empty {
+  padding: 20px;
+  color: var(--text-muted);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ── Scrollbar styling ── */
+
+.tree-viewer-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tree-viewer-wrapper::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.tree-viewer-wrapper::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.tree-viewer-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}

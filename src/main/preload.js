@@ -126,4 +126,5 @@ contextBridge.exposeInMainWorld('api', {
   exportNotes: (notes) => ipcRenderer.invoke('renderer:export-notes', notes),
   importNotes: () => ipcRenderer.invoke('renderer:import-notes'),
   onMenuToggleNotes: (callback) => ipcRenderer.on('main:toggle-notes', callback),
+  onMenuToggleTreeView: (callback) => ipcRenderer.on('main:toggle-tree-view', callback),
 });

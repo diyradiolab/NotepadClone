@@ -235,6 +235,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Shift+N',
           click: () => mainWindow.webContents.send('main:toggle-notes'),
         },
+        {
+          label: 'Toggle Tree View',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => mainWindow.webContents.send('main:toggle-tree-view'),
+        },
         { type: 'separator' },
         {
           label: 'Theme',

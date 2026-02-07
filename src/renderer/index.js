@@ -12,6 +12,7 @@ import './styles/git-history-panel.css';
 import './styles/markdown-preview.css';
 import './styles/table-viewer.css';
 import './styles/notes-panel.css';
+import './styles/tree-viewer.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -28,6 +29,7 @@ import { setEditorTheme } from './editor/monaco-setup';
 import { applyTransform } from './editor/text-transforms';
 import { MarkdownPreview } from './components/markdown-preview';
 import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/table-viewer';
+import { TreeViewer } from './components/tree-viewer';
 import { NotesPanel } from './components/notes-panel';
 
 // ── Initialize Components ──
@@ -51,6 +53,7 @@ const gitCommitDialog = new GitCommitDialog();
 const gitHistoryPanel = new GitHistoryPanel(tabManager, editorManager);
 const markdownPreview = new MarkdownPreview(editorContainer);
 const tableViewer = new TableViewer(editorContainer);
+const treeViewer = new TreeViewer(editorContainer);
 const notesPanel = new NotesPanel(document.getElementById('notes-panel'));
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
@@ -69,6 +72,22 @@ tableViewer.onRowClick((lineNumber) => {
   tableViewer.destroy();
   editorManager.activateTab(tabId);
   updateTableToolbar(true, 'edit');
+  updateMarkdownToolbar(false);
+  const langInfo = editorManager.getLanguageInfo(tabId);
+  statusBar.updateLanguage(langInfo.displayName);
+  editorManager.revealLine(tabId, lineNumber);
+});
+
+treeViewer.onNodeClick((lineNumber) => {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isTreeFile) return;
+  // Switch to editor mode, then jump to line
+  tab.treeMode = 'edit';
+  treeViewer.destroy();
+  editorManager.activateTab(tabId);
+  updateTreeToolbar(true, 'edit');
+  updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
   updateMarkdownToolbar(false);
   const langInfo = editorManager.getLanguageInfo(tabId);
   statusBar.updateLanguage(langInfo.displayName);
@@ -547,12 +566,99 @@ function isTableExtension(filename) {
   return lower.endsWith('.csv') || lower.endsWith('.tsv');
 }
 
+// ── Tree Viewer ──
+
+const treeToggleBtn = document.getElementById('btn-tree-toggle');
+const treeSeparator = document.getElementById('tree-separator');
+const treeToggleIcon = document.getElementById('tree-toggle-icon');
+
+const TREE_ICON_TREE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="10" r="1.5"/><circle cx="13" cy="13" r="1.5"/><line x1="4.2" y1="3.7" x2="7.8" y2="5.5"/><line x1="4.2" y1="3.7" x2="7.8" y2="9.5"/><line x1="10.2" y1="10.7" x2="11.8" y2="12.5"/></svg>';
+const TREE_ICON_PENCIL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/></svg>';
+
+function updateTreeToolbar(isTree, mode) {
+  if (!isTree) {
+    treeToggleBtn.style.display = 'none';
+    treeSeparator.style.display = 'none';
+    return;
+  }
+  treeToggleBtn.style.display = '';
+  treeSeparator.style.display = '';
+  if (mode === 'tree') {
+    treeToggleIcon.innerHTML = TREE_ICON_PENCIL;
+    treeToggleBtn.title = 'Switch to Editor (Ctrl+Shift+R)';
+  } else {
+    treeToggleIcon.innerHTML = TREE_ICON_TREE;
+    treeToggleBtn.title = 'Switch to Tree View (Ctrl+Shift+R)';
+  }
+}
+
+function toggleTreeMode() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isTreeFile) return;
+
+  const entry = editorManager.editors.get(tabId);
+
+  if (tab.treeMode === 'tree') {
+    // Switch to editor
+    tab.treeMode = 'edit';
+    treeViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateTreeToolbar(true, 'edit');
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else {
+    // Switch to tree — save editor state first
+    const editor = editorManager.getActiveEditor();
+    if (editor && entry) {
+      entry.viewState = editor.saveViewState();
+      editor.dispose();
+      entry.editor = null;
+    }
+    tab.treeMode = 'tree';
+    editorManager.container.innerHTML = '';
+    const content = entry.model.getValue();
+    treeViewer.render(content, tab.title);
+    updateTreeToolbar(true, 'tree');
+    statusBar.updateLanguage('Tree View');
+  }
+}
+
+function isTreeFile(filename) {
+  if (!filename) return false;
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.json') || lower.endsWith('.xml');
+}
+
 // ── Tab ↔ Editor Wiring ──
 
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
-  if (tab && tab.isTableFile && tab.tableMode === 'table') {
+  if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
+    // Tree view mode: deactivate previous tab manually, then render tree
+    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
+      const current = editorManager.editors.get(editorManager.activeTabId);
+      if (current.isDiffTab) {
+        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
+      } else if (current.editor) {
+        current.viewState = current.editor.saveViewState();
+        current.editor.dispose();
+        current.editor = null;
+      }
+    }
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const entry = editorManager.editors.get(tabId);
+    if (entry) {
+      const content = entry.model.getValue();
+      treeViewer.render(content, tab.title);
+    }
+    statusBar.updateLanguage('Tree View');
+    updateTreeToolbar(true, 'tree');
+    updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
+    updateMarkdownToolbar(false);
+  } else if (tab && tab.isTableFile && tab.tableMode === 'table') {
     // Table view mode: deactivate previous tab manually, then render table
     if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
       const current = editorManager.editors.get(editorManager.activeTabId);
@@ -573,6 +679,7 @@ tabManager.onActivate((tabId) => {
     }
     statusBar.updateLanguage('Table View');
     updateTableToolbar(true, 'table');
+    updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
   } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
     // Markdown read mode: deactivate previous tab manually, then render preview
@@ -596,6 +703,7 @@ tabManager.onActivate((tabId) => {
     statusBar.updateLanguage('Markdown (Read)');
     updateMarkdownToolbar(true, 'read');
     updateTableToolbar(false);
+    updateTreeToolbar(false);
   } else if (tab && tab.isLargeFile) {
     // Show large file viewer
     editorContainer.innerHTML = '';
@@ -606,6 +714,7 @@ tabManager.onActivate((tabId) => {
     statusBar.updateLanguage('Large File');
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
+    updateTreeToolbar(false);
   } else if (tab && tab.isHistoryTab) {
     const entry = editorManager.editors.get(tabId);
     if (entry) {
@@ -616,11 +725,13 @@ tabManager.onActivate((tabId) => {
     statusBar.updateLanguage('Git History');
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
+    updateTreeToolbar(false);
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
+    updateTreeToolbar(false);
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
@@ -629,13 +740,21 @@ tabManager.onActivate((tabId) => {
     if (tab && tab.isMarkdown) {
       updateMarkdownToolbar(true, 'edit');
       updateTableToolbar(false);
+      updateTreeToolbar(false);
     } else if (tab && tab.isTableFile) {
       // Table file in edit mode
       updateTableToolbar(true, 'edit');
+      updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
+      updateMarkdownToolbar(false);
+    } else if (tab && tab.isTreeFile) {
+      // Tree file in edit mode (not table-compatible)
+      updateTreeToolbar(true, 'edit');
+      updateTableToolbar(false);
       updateMarkdownToolbar(false);
     } else {
       updateMarkdownToolbar(false);
       updateTableToolbar(false);
+      updateTreeToolbar(false);
     }
   }
 
@@ -661,6 +780,11 @@ tabManager.onClose((tabId) => {
   // Clean up table viewer if active
   if (tab && tab.isTableFile && tab.tableMode === 'table') {
     tableViewer.destroy();
+  }
+
+  // Clean up tree viewer if active
+  if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
+    treeViewer.destroy();
   }
 
   // Clean up history tab
@@ -836,12 +960,20 @@ async function openFileByPath(filePath, lineNumber) {
     }
   }
 
+  // Detect tree files (JSON/XML) — default to tree if not table-compatible
+  if (isTreeFile(filename)) {
+    const tab = tabManager.getTab(tabId);
+    tab.isTreeFile = true;
+    tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
+  }
+
   tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  // Language display is set by onActivate for markdown/table, but keep for others
-  if (!isMarkdownFile(filename) && !(tabManager.getTab(tabId) && tabManager.getTab(tabId).isTableFile)) {
+  // Language display is set by onActivate for markdown/table/tree, but keep for others
+  const activeTab = tabManager.getTab(tabId);
+  if (!isMarkdownFile(filename) && !(activeTab && activeTab.isTableFile) && !(activeTab && activeTab.isTreeFile && activeTab.treeMode === 'tree')) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
@@ -906,11 +1038,19 @@ async function openFile() {
       }
     }
 
+    // Detect tree files (JSON/XML) — default to tree if not table-compatible
+    if (isTreeFile(filename)) {
+      const tab = tabManager.getTab(tabId);
+      tab.isTreeFile = true;
+      tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
+    }
+
     tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
     statusBar.updateLineEnding(file.lineEnding || 'LF');
     statusBar.updateEncoding(file.encoding || 'UTF-8');
-    if (!isMarkdownFile(filename) && !(tabManager.getTab(tabId) && tabManager.getTab(tabId).isTableFile)) {
+    const openedTab = tabManager.getTab(tabId);
+    if (!isMarkdownFile(filename) && !(openedTab && openedTab.isTableFile) && !(openedTab && openedTab.isTreeFile && openedTab.treeMode === 'tree')) {
       statusBar.updateLanguage(langInfo.displayName);
     }
   }
@@ -1122,6 +1262,11 @@ window.api.onFileChanged(async (filePath) => {
         const entry = editorManager.editors.get(tabId);
         if (entry) tableViewer.render(entry.model.getValue(), tab.title);
       }
+      // Re-render tree viewer if in tree mode
+      if (tab.isTreeFile && tab.treeMode === 'tree' && tabId === tabManager.getActiveTabId()) {
+        const entry = editorManager.editors.get(tabId);
+        if (entry) treeViewer.render(entry.model.getValue(), tab.title);
+      }
     }
   }
 });
@@ -1155,6 +1300,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'notes-toggle': notesPanel.toggle(); break;
     case 'markdown-toggle': toggleMarkdownMode(); break;
     case 'table-toggle': toggleTableMode(); break;
+    case 'tree-toggle': toggleTreeMode(); break;
   }
 });
 
@@ -1192,6 +1338,7 @@ window.api.onMenuCompareTabs(() => {
 window.api.onMenuGitHistory(() => showGitFileHistory());
 
 window.api.onMenuToggleNotes(() => notesPanel.toggle());
+window.api.onMenuToggleTreeView(() => toggleTreeMode());
 
 // Text transforms (Edit > Convert Case / Line Operations / Encode/Decode)
 window.api.onTextTransform((type) => {
@@ -1213,6 +1360,10 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
     e.preventDefault();
     notesPanel.toggle();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+    e.preventDefault();
+    toggleTreeMode();
   }
 });
 
