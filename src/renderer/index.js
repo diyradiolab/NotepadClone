@@ -159,9 +159,13 @@ function getActiveFileDirPath() {
 }
 
 async function refreshGitStatus() {
-  const dirPath = getActiveFileDirPath();
-  gitState = await window.api.gitStatus(dirPath);
-  updateGitUI();
+  try {
+    const dirPath = getActiveFileDirPath();
+    gitState = await window.api.gitStatus(dirPath);
+    updateGitUI();
+  } catch (err) {
+    console.error('Git status refresh failed:', err);
+  }
 }
 
 function updateGitUI() {
@@ -879,7 +883,13 @@ async function openLargeFile(filePath, fileSize) {
   `;
 
   // Index the file
-  const result = await window.api.openLargeFile(filePath);
+  let result;
+  try {
+    result = await window.api.openLargeFile(filePath);
+  } catch (err) {
+    viewerContainer.innerHTML = `<div class="lfv-loading"><div>Error: ${err.message}</div></div>`;
+    return;
+  }
 
   if (result.error) {
     viewerContainer.innerHTML = `<div class="lfv-loading"><div>Error: ${result.error}</div></div>`;
@@ -887,7 +897,12 @@ async function openLargeFile(filePath, fileSize) {
   }
 
   // Initialize the viewer (init calls _render and _bindEvents internally)
-  await viewer.init(filePath, result.totalLines, result.fileSize);
+  try {
+    await viewer.init(filePath, result.totalLines, result.fileSize);
+  } catch (err) {
+    viewerContainer.innerHTML = `<div class="lfv-loading"><div>Error initializing viewer: ${err.message}</div></div>`;
+    return;
+  }
 
   const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
   statusBar.updateEncoding('UTF-8');
@@ -920,7 +935,13 @@ async function openFileByPath(filePath, lineNumber) {
     return;
   }
 
-  const file = await window.api.readFileByPath(filePath);
+  let file;
+  try {
+    file = await window.api.readFileByPath(filePath);
+  } catch (err) {
+    statusBar.showMessage(`Failed to open file: ${err.message}`);
+    return;
+  }
   if (!file) return;
 
   // Route to large file viewer
@@ -1310,7 +1331,13 @@ function newFile() {
 }
 
 async function openFile() {
-  const files = await window.api.openFile();
+  let files;
+  try {
+    files = await window.api.openFile();
+  } catch (err) {
+    statusBar.showMessage(`Failed to open file: ${err.message}`);
+    return;
+  }
   if (!files) return;
 
   for (const file of files) {
@@ -1393,14 +1420,19 @@ async function saveFile() {
   const content = editorManager.getContent(tabId);
 
   if (tab.filePath) {
-    const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
-    if (result.success) {
-      tabManager.setDirty(tabId, false);
-      refreshGitStatus();
-    } else {
-      statusBar.showMessage(`Save failed: ${result.error}`);
+    try {
+      const result = await window.api.saveFile(tab.filePath, content, tab.encoding);
+      if (result.success) {
+        tabManager.setDirty(tabId, false);
+        refreshGitStatus();
+      } else {
+        statusBar.showMessage(`Save failed: ${result.error}`);
+      }
+      return result.success;
+    } catch (err) {
+      statusBar.showMessage(`Save failed: ${err.message}`);
+      return false;
     }
-    return result.success;
   } else {
     return await saveFileAs();
   }
@@ -1414,7 +1446,13 @@ async function saveFileAs() {
   if (tab.isLargeFile) return false; // Large files are read-only for now
 
   const content = editorManager.getContent(tabId);
-  const result = await window.api.saveFileAs(content, tab.filePath || tab.title, tab.encoding);
+  let result;
+  try {
+    result = await window.api.saveFileAs(content, tab.filePath || tab.title, tab.encoding);
+  } catch (err) {
+    statusBar.showMessage(`Save As failed: ${err.message}`);
+    return false;
+  }
 
   if (result) {
     tabManager.setFilePath(tabId, result.filePath);
@@ -1573,36 +1611,40 @@ findInFiles.onResultClick((filePath, line) => {
 // ── File Watching ──
 
 window.api.onFileChanged(async (filePath) => {
-  const tabId = tabManager.findTabByPath(filePath);
-  if (!tabId) return;
+  try {
+    const tabId = tabManager.findTabByPath(filePath);
+    if (!tabId) return;
 
-  const tab = tabManager.getTab(tabId);
-  if (tab.isLargeFile) return; // Don't auto-reload large files
+    const tab = tabManager.getTab(tabId);
+    if (tab.isLargeFile) return; // Don't auto-reload large files
 
-  if (tab.dirty) {
-    const filename = filePath.split(/[/\\]/).pop();
-    tabManager.setTitle(tabId, `${filename} [changed on disk]`);
-  } else {
-    const file = await window.api.reloadFile(filePath);
-    if (file) {
-      editorManager.setContent(tabId, file.content);
-      tabManager.setDirty(tabId, false);
-      // Re-render markdown preview if in read mode
-      if (tab.isMarkdown && tab.markdownMode === 'read' && tabId === tabManager.getActiveTabId()) {
-        const entry = editorManager.editors.get(tabId);
-        if (entry) markdownPreview.render(entry.model.getValue(), tab.filePath);
-      }
-      // Re-render table viewer if in table mode
-      if (tab.isTableFile && tab.tableMode === 'table' && tabId === tabManager.getActiveTabId()) {
-        const entry = editorManager.editors.get(tabId);
-        if (entry) tableViewer.render(entry.model.getValue(), tab.title);
-      }
-      // Re-render tree viewer if in tree mode
-      if (tab.isTreeFile && tab.treeMode === 'tree' && tabId === tabManager.getActiveTabId()) {
-        const entry = editorManager.editors.get(tabId);
-        if (entry) treeViewer.render(entry.model.getValue(), tab.title);
+    if (tab.dirty) {
+      const filename = filePath.split(/[/\\]/).pop();
+      tabManager.setTitle(tabId, `${filename} [changed on disk]`);
+    } else {
+      const file = await window.api.reloadFile(filePath);
+      if (file) {
+        editorManager.setContent(tabId, file.content);
+        tabManager.setDirty(tabId, false);
+        // Re-render markdown preview if in read mode
+        if (tab.isMarkdown && tab.markdownMode === 'read' && tabId === tabManager.getActiveTabId()) {
+          const entry = editorManager.editors.get(tabId);
+          if (entry) markdownPreview.render(entry.model.getValue(), tab.filePath);
+        }
+        // Re-render table viewer if in table mode
+        if (tab.isTableFile && tab.tableMode === 'table' && tabId === tabManager.getActiveTabId()) {
+          const entry = editorManager.editors.get(tabId);
+          if (entry) tableViewer.render(entry.model.getValue(), tab.title);
+        }
+        // Re-render tree viewer if in tree mode
+        if (tab.isTreeFile && tab.treeMode === 'tree' && tabId === tabManager.getActiveTabId()) {
+          const entry = editorManager.editors.get(tabId);
+          if (entry) treeViewer.render(entry.model.getValue(), tab.title);
+        }
       }
     }
+  } catch (err) {
+    console.error('File change handler error:', err);
   }
 });
 
