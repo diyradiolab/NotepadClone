@@ -24,6 +24,7 @@ import { GitCommitDialog } from './components/git-commit-dialog';
 import { SqlQueryPanel } from './components/sql-query-panel';
 import { GitHistoryPanel } from './components/git-history-panel';
 import { setEditorTheme } from './editor/monaco-setup';
+import { applyTransform } from './editor/text-transforms';
 import { MarkdownPreview } from './components/markdown-preview';
 import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/table-viewer';
 
@@ -1184,6 +1185,12 @@ window.api.onMenuCompareTabs(() => {
   compareTabDialog.show(tabManager.getAllTabs(), tabManager.getActiveTabId());
 });
 window.api.onMenuGitHistory(() => showGitFileHistory());
+
+// Text transforms (Edit > Convert Case / Line Operations / Encode/Decode)
+window.api.onTextTransform((type) => {
+  const editor = editorManager.getActiveEditor();
+  if (editor) applyTransform(editor, type, statusBar);
+});
 
 // ── Markdown Keyboard Shortcut (Ctrl+Shift+M) ──
 

@@ -115,4 +115,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Menu events — Git History
   onMenuGitHistory: (callback) => ipcRenderer.on('main:git-history', callback),
+
+  // Text transforms
+  onTextTransform: (callback) => ipcRenderer.on('main:text-transform', (_e, type) => callback(type)),
 });
