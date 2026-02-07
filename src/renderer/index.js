@@ -549,21 +549,24 @@ function isTreeFile(filename) {
 
 // ── Tab ↔ Editor Wiring ──
 
+function deactivatePreviousEditor() {
+  if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
+    const current = editorManager.editors.get(editorManager.activeTabId);
+    if (current.isDiffTab) {
+      if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
+    } else if (current.editor) {
+      current.viewState = current.editor.saveViewState();
+      current.editor.dispose();
+      current.editor = null;
+    }
+  }
+}
+
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
   if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
-    // Tree view mode: deactivate previous tab manually, then render tree
-    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
-      const current = editorManager.editors.get(editorManager.activeTabId);
-      if (current.isDiffTab) {
-        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
-      } else if (current.editor) {
-        current.viewState = current.editor.saveViewState();
-        current.editor.dispose();
-        current.editor = null;
-      }
-    }
+    deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
     editorManager.activeTabId = tabId;
     const entry = editorManager.editors.get(tabId);
@@ -576,17 +579,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
   } else if (tab && tab.isTableFile && tab.tableMode === 'table') {
-    // Table view mode: deactivate previous tab manually, then render table
-    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
-      const current = editorManager.editors.get(editorManager.activeTabId);
-      if (current.isDiffTab) {
-        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
-      } else if (current.editor) {
-        current.viewState = current.editor.saveViewState();
-        current.editor.dispose();
-        current.editor = null;
-      }
-    }
+    deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
     editorManager.activeTabId = tabId;
     const entry = editorManager.editors.get(tabId);
@@ -599,17 +592,7 @@ tabManager.onActivate((tabId) => {
     updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
   } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
-    // Markdown read mode: deactivate previous tab manually, then render preview
-    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
-      const current = editorManager.editors.get(editorManager.activeTabId);
-      if (current.isDiffTab) {
-        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
-      } else if (current.editor) {
-        current.viewState = current.editor.saveViewState();
-        current.editor.dispose();
-        current.editor = null;
-      }
-    }
+    deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
     editorManager.activeTabId = tabId;
     const entry = editorManager.editors.get(tabId);
