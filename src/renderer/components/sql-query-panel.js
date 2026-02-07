@@ -27,9 +27,9 @@ export class SqlQueryPanel {
   _render() {
     this.container.innerHTML = `
       <div class="sqp-resize-handle" id="sqp-resize-handle"></div>
-      <div class="sqp-header">
+      <div class="sqp-header panel-header">
         <span>SQL QUERY</span>
-        <button class="sqp-close-btn" title="Close">\u00D7</button>
+        <button class="sqp-close-btn panel-btn" title="Close">\u00D7</button>
       </div>
       <div class="sqp-options-bar">
         <label>Delimiter:

@@ -24,9 +24,9 @@ export class FindInFiles {
   _render() {
     this.container.innerHTML = `
       <div class="fif-resize-handle" id="fif-resize-handle"></div>
-      <div class="fif-header">
+      <div class="fif-header panel-header">
         <span class="fif-title" id="fif-title">FIND</span>
-        <button class="fif-close-btn" title="Close">\u00D7</button>
+        <button class="fif-close-btn panel-btn" title="Close">\u00D7</button>
       </div>
       <div class="fif-search-bar">
         <div class="fif-scope-bar">

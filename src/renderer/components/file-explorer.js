@@ -17,9 +17,9 @@ export class FileExplorer {
 
   _render() {
     this.container.innerHTML = `
-      <div class="explorer-header">
+      <div class="explorer-header panel-header">
         <span class="explorer-title">EXPLORER</span>
-        <button class="explorer-btn" id="explorer-open-folder" title="Open Folder">+</button>
+        <button class="explorer-btn panel-btn" id="explorer-open-folder" title="Open Folder">+</button>
       </div>
       <div class="explorer-tree" id="explorer-tree">
         <div class="explorer-empty">No folder opened</div>

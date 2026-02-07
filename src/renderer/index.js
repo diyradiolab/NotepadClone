@@ -919,37 +919,9 @@ window.api.onLargeFileProgress((data) => {
   if (text) text.textContent = `${data.percent}%`;
 });
 
-// ── Open a file by path (used by explorer, recent files, find in files) ──
+// ── Create a tab for a file object (shared by openFileByPath and openFile) ──
 
-async function openFileByPath(filePath, lineNumber) {
-  const existingTabId = tabManager.findTabByPath(filePath);
-  if (existingTabId) {
-    tabManager.activate(existingTabId);
-    const tab = tabManager.getTab(existingTabId);
-    if (lineNumber && tab && tab.isLargeFile) {
-      const viewer = largeFileViewers.get(existingTabId);
-      if (viewer) viewer.scrollToLine(lineNumber);
-    } else if (lineNumber) {
-      editorManager.revealLine(existingTabId, lineNumber);
-    }
-    return;
-  }
-
-  let file;
-  try {
-    file = await window.api.readFileByPath(filePath);
-  } catch (err) {
-    statusBar.showMessage(`Failed to open file: ${err.message}`);
-    return;
-  }
-  if (!file) return;
-
-  // Route to large file viewer
-  if (file.isLargeFile) {
-    await openLargeFile(file.filePath, file.size);
-    return;
-  }
-
+function createTabForFile(file) {
   const filename = file.filePath.split(/[/\\]/).pop();
   const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
   tabManager.setFilePath(tabId, file.filePath);
@@ -988,16 +960,50 @@ async function openFileByPath(filePath, lineNumber) {
     tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
   }
 
-  tabManager.activate(tabId); // onActivate routing handles preview vs editor
+  tabManager.activate(tabId);
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  // Language display is set by onActivate for markdown/table/tree, but keep for others
   const activeTab = tabManager.getTab(tabId);
   if (!isMarkdownFile(filename) && !(activeTab && activeTab.isTableFile) && !(activeTab && activeTab.isTreeFile && activeTab.treeMode === 'tree')) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
+  return tabId;
+}
+
+// ── Open a file by path (used by explorer, recent files, find in files) ──
+
+async function openFileByPath(filePath, lineNumber) {
+  const existingTabId = tabManager.findTabByPath(filePath);
+  if (existingTabId) {
+    tabManager.activate(existingTabId);
+    const tab = tabManager.getTab(existingTabId);
+    if (lineNumber && tab && tab.isLargeFile) {
+      const viewer = largeFileViewers.get(existingTabId);
+      if (viewer) viewer.scrollToLine(lineNumber);
+    } else if (lineNumber) {
+      editorManager.revealLine(existingTabId, lineNumber);
+    }
+    return;
+  }
+
+  let file;
+  try {
+    file = await window.api.readFileByPath(filePath);
+  } catch (err) {
+    statusBar.showMessage(`Failed to open file: ${err.message}`);
+    return;
+  }
+  if (!file) return;
+
+  // Route to large file viewer
+  if (file.isLargeFile) {
+    await openLargeFile(file.filePath, file.size);
+    return;
+  }
+
+  const tabId = createTabForFile(file);
   if (lineNumber) editorManager.revealLine(tabId, lineNumber);
 }
 
@@ -1353,52 +1359,7 @@ async function openFile() {
       continue;
     }
 
-    const filename = file.filePath.split(/[/\\]/).pop();
-    const tabId = tabManager.createTab(filename, file.filePath, file.encoding || 'UTF-8');
-    tabManager.setFilePath(tabId, file.filePath);
-    const langInfo = editorManager.createEditorForTab(tabId, file.content, filename);
-
-    // Detect markdown files — default to read mode
-    if (isMarkdownFile(filename)) {
-      const tab = tabManager.getTab(tabId);
-      tab.isMarkdown = true;
-      tab.markdownMode = 'read';
-    }
-
-    // Detect table files — default to table mode
-    if (isTableExtension(filename)) {
-      const tab = tabManager.getTab(tabId);
-      tab.isTableFile = true;
-      tab.tableMode = 'table';
-    } else if (filename.toLowerCase().endsWith('.json')) {
-      if (isTableJSON(file.content)) {
-        const tab = tabManager.getTab(tabId);
-        tab.isTableFile = true;
-        tab.tableMode = 'table';
-      }
-    } else if (filename.toLowerCase().endsWith('.xml')) {
-      if (isTableXML(file.content)) {
-        const tab = tabManager.getTab(tabId);
-        tab.isTableFile = true;
-        tab.tableMode = 'table';
-      }
-    }
-
-    // Detect tree files (JSON/XML) — default to tree if not table-compatible
-    if (isTreeFile(filename)) {
-      const tab = tabManager.getTab(tabId);
-      tab.isTreeFile = true;
-      tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
-    }
-
-    tabManager.activate(tabId); // onActivate routing handles preview vs editor
-
-    statusBar.updateLineEnding(file.lineEnding || 'LF');
-    statusBar.updateEncoding(file.encoding || 'UTF-8');
-    const openedTab = tabManager.getTab(tabId);
-    if (!isMarkdownFile(filename) && !(openedTab && openedTab.isTableFile) && !(openedTab && openedTab.isTreeFile && openedTab.treeMode === 'tree')) {
-      statusBar.updateLanguage(langInfo.displayName);
-    }
+    createTabForFile(file);
   }
 }
 

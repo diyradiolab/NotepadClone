@@ -55,11 +55,11 @@ export class NotesPanel {
   _render() {
     this.container.innerHTML = `
       <div class="notes-resize"></div>
-      <div class="notes-header">
+      <div class="notes-header panel-header">
         <span class="notes-header-title">NOTES</span>
-        <button class="notes-header-btn" id="notes-import-btn" title="Import Notes">&#8615;</button>
-        <button class="notes-header-btn" id="notes-export-btn" title="Export Notes">&#8613;</button>
-        <button class="notes-header-btn" id="notes-add-btn" title="New Note">+</button>
+        <button class="notes-header-btn panel-btn" id="notes-import-btn" title="Import Notes">&#8615;</button>
+        <button class="notes-header-btn panel-btn" id="notes-export-btn" title="Export Notes">&#8613;</button>
+        <button class="notes-header-btn panel-btn" id="notes-add-btn" title="New Note">+</button>
       </div>
       <div class="notes-search">
         <input type="text" class="notes-search-input" placeholder="Search notes..." />
