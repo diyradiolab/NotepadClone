@@ -11,6 +11,7 @@ import './styles/sql-query-panel.css';
 import './styles/git-history-panel.css';
 import './styles/markdown-preview.css';
 import './styles/table-viewer.css';
+import './styles/notes-panel.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -27,6 +28,7 @@ import { setEditorTheme } from './editor/monaco-setup';
 import { applyTransform } from './editor/text-transforms';
 import { MarkdownPreview } from './components/markdown-preview';
 import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/table-viewer';
+import { NotesPanel } from './components/notes-panel';
 
 // ── Initialize Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -49,6 +51,7 @@ const gitCommitDialog = new GitCommitDialog();
 const gitHistoryPanel = new GitHistoryPanel(tabManager, editorManager);
 const markdownPreview = new MarkdownPreview(editorContainer);
 const tableViewer = new TableViewer(editorContainer);
+const notesPanel = new NotesPanel(document.getElementById('notes-panel'));
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -1149,6 +1152,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-push': gitPush(); break;
     case 'git-pull': gitPull(); break;
     case 'git-history': showGitFileHistory(); break;
+    case 'notes-toggle': notesPanel.toggle(); break;
     case 'markdown-toggle': toggleMarkdownMode(); break;
     case 'table-toggle': toggleTableMode(); break;
   }
@@ -1187,6 +1191,8 @@ window.api.onMenuCompareTabs(() => {
 });
 window.api.onMenuGitHistory(() => showGitFileHistory());
 
+window.api.onMenuToggleNotes(() => notesPanel.toggle());
+
 // Text transforms (Edit > Convert Case / Line Operations / Encode/Decode)
 window.api.onTextTransform((type) => {
   const editor = editorManager.getActiveEditor();
@@ -1203,6 +1209,10 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
     e.preventDefault();
     toggleTableMode();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
+    e.preventDefault();
+    notesPanel.toggle();
   }
 });
 
@@ -1221,6 +1231,11 @@ window.api.onGetDirtyTabs(() => {
 window.api.onSaveTab(async (tabId) => {
   const saved = await saveTab(tabId);
   window.api.sendSaveTabResponse(saved);
+});
+
+// ── Flush notes on close ──
+window.addEventListener('beforeunload', () => {
+  notesPanel.flushSave();
 });
 
 // ── Start with one blank tab ──

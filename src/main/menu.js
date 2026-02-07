@@ -230,6 +230,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Shift+8',
           click: () => mainWindow.webContents.send('main:toggle-show-all-chars'),
         },
+        {
+          label: 'Notes Panel',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => mainWindow.webContents.send('main:toggle-notes'),
+        },
         { type: 'separator' },
         {
           label: 'Theme',

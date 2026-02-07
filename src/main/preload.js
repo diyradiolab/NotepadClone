@@ -119,4 +119,9 @@ contextBridge.exposeInMainWorld('api', {
 
   // Text transforms
   onTextTransform: (callback) => ipcRenderer.on('main:text-transform', (_e, type) => callback(type)),
+
+  // Notes panel
+  getNotesData: () => ipcRenderer.invoke('renderer:get-notes-data'),
+  saveNotesData: (data) => ipcRenderer.invoke('renderer:save-notes-data', data),
+  onMenuToggleNotes: (callback) => ipcRenderer.on('main:toggle-notes', callback),
 });

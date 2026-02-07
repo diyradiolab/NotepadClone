@@ -1,0 +1,441 @@
+/**
+ * NotesPanel — right-side scratchpad for quick notes.
+ * Multiple named plain-text notes, persisted via electron-store.
+ */
+export class NotesPanel {
+  constructor(container) {
+    this.container = container;
+    this.notes = [];
+    this.activeNoteId = null;
+    this.searchQuery = '';
+    this._saveTimeout = null;
+    this._noteCounter = 0;
+    this._render();
+    this._loadNotes();
+    this._initResize();
+  }
+
+  // ── Public API ──
+
+  toggle() {
+    this.container.classList.toggle('hidden');
+    if (!this.container.classList.contains('hidden')) {
+      // Focus textarea when opening
+      const ta = this.container.querySelector('.notes-textarea');
+      if (ta) ta.focus();
+    }
+    this._debounceSave();
+  }
+
+  show() {
+    this.container.classList.remove('hidden');
+  }
+
+  hide() {
+    this.container.classList.add('hidden');
+  }
+
+  isVisible() {
+    return !this.container.classList.contains('hidden');
+  }
+
+  // Flush any pending save (call on beforeunload)
+  flushSave() {
+    if (this._saveTimeout) {
+      clearTimeout(this._saveTimeout);
+      this._saveTimeout = null;
+      this._saveNotes();
+    }
+  }
+
+  // ── Render ──
+
+  _render() {
+    this.container.innerHTML = `
+      <div class="notes-resize"></div>
+      <div class="notes-header">
+        <span class="notes-header-title">NOTES</span>
+        <button class="notes-header-btn" id="notes-add-btn" title="New Note">+</button>
+      </div>
+      <div class="notes-search">
+        <input type="text" class="notes-search-input" placeholder="Search notes..." />
+      </div>
+      <div class="notes-list"></div>
+      <textarea class="notes-textarea" placeholder="Select or create a note..."></textarea>
+    `;
+
+    // Bind header add button
+    this.container.querySelector('#notes-add-btn').addEventListener('click', () => {
+      this._createNote();
+    });
+
+    // Bind search
+    const searchInput = this.container.querySelector('.notes-search-input');
+    searchInput.addEventListener('input', () => {
+      this.searchQuery = searchInput.value;
+      this._renderNoteList();
+    });
+
+    // Bind textarea changes
+    const textarea = this.container.querySelector('.notes-textarea');
+    textarea.addEventListener('input', () => {
+      if (!this.activeNoteId) return;
+      const note = this.notes.find(n => n.id === this.activeNoteId);
+      if (note) {
+        note.content = textarea.value;
+        this._debounceSave();
+      }
+    });
+  }
+
+  // ── Data ──
+
+  async _loadNotes() {
+    try {
+      const data = await window.api.getNotesData();
+      this.notes = data.notes || [];
+      this.activeNoteId = data.activeNoteId || null;
+
+      // Restore panel width
+      if (data.panelWidth) {
+        this.container.style.width = `${data.panelWidth}px`;
+      }
+
+      // Restore visibility
+      if (data.visible) {
+        this.container.classList.remove('hidden');
+      }
+
+      // Find max counter for naming
+      for (const note of this.notes) {
+        const match = note.title.match(/^Note (\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num >= this._noteCounter) this._noteCounter = num;
+        }
+      }
+
+      this._renderNoteList();
+      this._showActiveNote();
+    } catch {
+      // If data is corrupted, start fresh
+      this.notes = [];
+      this.activeNoteId = null;
+      this._renderNoteList();
+      this._showActiveNote();
+    }
+  }
+
+  _saveNotes() {
+    const data = {
+      notes: this.notes,
+      activeNoteId: this.activeNoteId,
+      panelWidth: parseInt(this.container.style.width, 10) || 250,
+      visible: this.isVisible(),
+    };
+    window.api.saveNotesData(data);
+  }
+
+  _debounceSave() {
+    if (this._saveTimeout) clearTimeout(this._saveTimeout);
+    this._saveTimeout = setTimeout(() => {
+      this._saveTimeout = null;
+      this._saveNotes();
+    }, 500);
+  }
+
+  // ── Note Operations ──
+
+  _createNote() {
+    this._noteCounter++;
+    const note = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: `Note ${this._noteCounter}`,
+      content: '',
+      pinned: false,
+      createdAt: Date.now(),
+    };
+    this.notes.push(note);
+    this.activeNoteId = note.id;
+    this._renderNoteList();
+    this._showActiveNote();
+    this._debounceSave();
+
+    // Focus textarea
+    const ta = this.container.querySelector('.notes-textarea');
+    if (ta) ta.focus();
+  }
+
+  _deleteNote(id) {
+    const note = this.notes.find(n => n.id === id);
+    if (!note) return;
+
+    this._showConfirmDialog(`Delete "${this._escapeHtml(note.title)}"?`, () => {
+      const index = this.notes.findIndex(n => n.id === id);
+      this.notes.splice(index, 1);
+
+      if (this.activeNoteId === id) {
+        // Select next, or previous, or null
+        const sorted = this._getSortedNotes();
+        if (sorted.length > 0) {
+          // Try to pick the note at the same position
+          const newIndex = Math.min(index, sorted.length - 1);
+          this.activeNoteId = sorted[Math.max(0, newIndex)].id;
+        } else {
+          this.activeNoteId = null;
+        }
+      }
+
+      this._renderNoteList();
+      this._showActiveNote();
+      this._debounceSave();
+    });
+  }
+
+  _selectNote(id) {
+    this.activeNoteId = id;
+    this._renderNoteList();
+    this._showActiveNote();
+    this._debounceSave();
+  }
+
+  _togglePin(id) {
+    const note = this.notes.find(n => n.id === id);
+    if (note) {
+      note.pinned = !note.pinned;
+      this._renderNoteList();
+      this._debounceSave();
+    }
+  }
+
+  _startRename(id) {
+    const item = this.container.querySelector(`.notes-list-item[data-id="${id}"]`);
+    if (!item) return;
+
+    const titleSpan = item.querySelector('.notes-item-title');
+    const note = this.notes.find(n => n.id === id);
+    if (!note || !titleSpan) return;
+
+    // Replace title span with input
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'notes-item-title-input';
+    input.value = note.title;
+    titleSpan.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const newTitle = input.value.trim();
+      if (newTitle) {
+        note.title = newTitle;
+      }
+      // Re-render to go back to span
+      this._renderNoteList();
+      this._debounceSave();
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === 'Escape') {
+        // Revert — just re-render without saving
+        input.removeEventListener('blur', commit);
+        this._renderNoteList();
+      }
+    });
+  }
+
+  // ── Rendering ──
+
+  _getSortedNotes() {
+    const filtered = this.searchQuery
+      ? this.notes.filter(n =>
+          n.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          n.content.toLowerCase().includes(this.searchQuery.toLowerCase())
+        )
+      : [...this.notes];
+
+    // Pinned first (alphabetical), then unpinned (alphabetical)
+    filtered.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return a.title.localeCompare(b.title);
+    });
+
+    return filtered;
+  }
+
+  _renderNoteList() {
+    const list = this.container.querySelector('.notes-list');
+    if (!list) return;
+
+    const sorted = this._getSortedNotes();
+
+    if (sorted.length === 0 && this.notes.length === 0) {
+      list.innerHTML = '<div class="notes-empty">No notes yet. Click + to create one.</div>';
+      return;
+    }
+
+    if (sorted.length === 0 && this.searchQuery) {
+      list.innerHTML = '<div class="notes-empty">No matching notes.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    for (const note of sorted) {
+      const item = document.createElement('div');
+      item.className = `notes-list-item${note.id === this.activeNoteId ? ' active' : ''}${note.pinned ? ' pinned' : ''}`;
+      item.dataset.id = note.id;
+
+      const pin = document.createElement('span');
+      pin.className = 'notes-pin';
+      pin.textContent = note.pinned ? '\u{1F4CC}' : '\u{1F4CC}';
+      pin.title = note.pinned ? 'Unpin' : 'Pin to top';
+      pin.style.opacity = note.pinned ? '1' : '0.3';
+      pin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._togglePin(note.id);
+      });
+
+      const title = document.createElement('span');
+      title.className = 'notes-item-title';
+      title.textContent = note.title;
+
+      const close = document.createElement('button');
+      close.className = 'notes-item-close';
+      close.textContent = '\u00D7';
+      close.title = 'Delete note';
+      close.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._deleteNote(note.id);
+      });
+
+      item.appendChild(pin);
+      item.appendChild(title);
+      item.appendChild(close);
+
+      // Single click to select
+      item.addEventListener('click', () => {
+        this._selectNote(note.id);
+      });
+
+      // Double click to rename
+      item.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        this._startRename(note.id);
+      });
+
+      list.appendChild(item);
+    }
+  }
+
+  _showActiveNote() {
+    const textarea = this.container.querySelector('.notes-textarea');
+    if (!textarea) return;
+
+    if (!this.activeNoteId) {
+      textarea.value = '';
+      textarea.disabled = true;
+      textarea.placeholder = 'Select or create a note...';
+      return;
+    }
+
+    const note = this.notes.find(n => n.id === this.activeNoteId);
+    if (!note) {
+      textarea.value = '';
+      textarea.disabled = true;
+      return;
+    }
+
+    textarea.disabled = false;
+    textarea.value = note.content;
+    textarea.placeholder = 'Start typing...';
+  }
+
+  // ── Resize ──
+
+  _initResize() {
+    const handle = this.container.querySelector('.notes-resize');
+    if (!handle) return;
+
+    let startX, startWidth;
+
+    const onMouseMove = (e) => {
+      // Panel is on the right, so dragging left = wider
+      const diff = startX - e.clientX;
+      const newWidth = Math.max(180, Math.min(400, startWidth + diff));
+      this.container.style.width = `${newWidth}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      this._debounceSave();
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = parseInt(this.container.style.width, 10) || this.container.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
+
+  // ── Confirm Dialog ──
+
+  _showConfirmDialog(message, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'notes-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="notes-confirm-dialog">
+        <p>${message}</p>
+        <div class="notes-confirm-buttons">
+          <button class="cancel-btn">Cancel</button>
+          <button class="danger confirm-btn">Delete</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const close = () => {
+      document.body.removeChild(overlay);
+    };
+
+    overlay.querySelector('.cancel-btn').addEventListener('click', close);
+    overlay.querySelector('.confirm-btn').addEventListener('click', () => {
+      close();
+      onConfirm();
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+
+    // Focus the cancel button for keyboard users
+    overlay.querySelector('.cancel-btn').focus();
+
+    // Escape to close
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        close();
+        document.removeEventListener('keydown', onKeyDown);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+  }
+
+  // ── Util ──
+
+  _escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}

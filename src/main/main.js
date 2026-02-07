@@ -629,3 +629,13 @@ ipcMain.handle('renderer:git-file-log', async (_event, { dirPath, filePath }) =>
 ipcMain.handle('renderer:git-file-diff', async (_event, { dirPath, hash, filePath }) => {
   return gitService.fileShow(dirPath, hash, filePath);
 });
+
+// ── Notes Panel ──
+
+ipcMain.handle('renderer:get-notes-data', async () => {
+  return store.get('notesPanel', { notes: [], activeNoteId: null, panelWidth: 250 });
+});
+
+ipcMain.handle('renderer:save-notes-data', async (_event, data) => {
+  store.set('notesPanel', data);
+});
