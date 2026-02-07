@@ -316,6 +316,10 @@ ipcMain.handle('renderer:open-folder', async () => {
   return result.filePaths[0];
 });
 
+ipcMain.handle('renderer:reveal-in-finder', (_event, filePath) => {
+  shell.showItemInFolder(filePath);
+});
+
 ipcMain.handle('renderer:read-file-by-path', async (_event, filePath) => {
   try {
     const { isLarge, size } = await largeFileManager.isLargeFile(filePath);

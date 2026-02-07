@@ -9,6 +9,7 @@
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
 }
 
 .file-explorer.hidden {
@@ -110,6 +111,68 @@
   background: var(--text-accent);
 }
 
+/* ── Filter Bar ── */
+.explorer-filter {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-secondary);
+  gap: 4px;
+}
+
+.explorer-filter-input {
+  flex: 1;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  font-size: 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.explorer-filter-input:focus {
+  border-color: var(--input-border-focus);
+}
+
+.explorer-filter-input::placeholder {
+  color: var(--text-muted);
+}
+
+.explorer-filter-clear {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+.explorer-filter-clear:hover {
+  color: var(--text-primary);
+}
+
+.explorer-filter-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Filter Visibility ── */
+.tree-item.filtered-out {
+  display: none;
+}
+
+/* ── Header Buttons ── */
+.explorer-header-buttons {
+  display: flex;
+  gap: 2px;
+}
+
 /* ── Context Menu ── */
 .explorer-context-menu {
   background: var(--bg-primary);
@@ -129,4 +192,10 @@
 
 .explorer-context-item:hover {
   background: var(--bg-hover, var(--bg-secondary));
+}
+
+.explorer-context-separator {
+  height: 1px;
+  background: var(--border-secondary);
+  margin: 4px 0;
 }

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   // Directory operations (file explorer)
   openFolder: () => ipcRenderer.invoke('renderer:open-folder'),
   readDirectory: (dirPath) => ipcRenderer.invoke('renderer:read-directory', dirPath),
+  revealInFinder: (filePath) => ipcRenderer.invoke('renderer:reveal-in-finder', filePath),
 
   // Active file tracking (for Share menu)
   notifyActiveFile: (filePath) => ipcRenderer.invoke('renderer:notify-active-file', filePath),
