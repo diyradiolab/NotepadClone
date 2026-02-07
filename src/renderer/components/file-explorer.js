@@ -29,6 +29,35 @@ export class FileExplorer {
     this.container.querySelector('#explorer-open-folder').addEventListener('click', () => {
       this.openFolder();
     });
+
+    // Delegated click handler for tree items
+    const tree = this.container.querySelector('#explorer-tree');
+    tree.addEventListener('click', (e) => {
+      const row = e.target.closest('.tree-row');
+      if (!row) return;
+      const item = row.closest('.tree-item');
+      if (!item) return;
+
+      if (item.classList.contains('tree-directory')) {
+        this._toggleDirectory(item);
+      } else if (item.classList.contains('tree-file')) {
+        // Highlight active
+        this.container.querySelectorAll('.tree-row.active').forEach(el => el.classList.remove('active'));
+        row.classList.add('active');
+        // Open file
+        this.onFileOpenCallbacks.forEach(cb => cb(item.dataset.path));
+      }
+    });
+
+    tree.addEventListener('contextmenu', (e) => {
+      const row = e.target.closest('.tree-row');
+      if (!row) return;
+      const item = row.closest('.tree-item.tree-file');
+      if (!item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this._showContextMenu(e.clientX, e.clientY, item.dataset.path);
+    });
   }
 
   async openFolder(folderPath) {
@@ -63,8 +92,6 @@ export class FileExplorer {
       <span class="tree-name">${escapeHtml(name)}</span>
     `;
 
-    row.addEventListener('click', () => this._toggleDirectory(node));
-
     const children = document.createElement('div');
     children.className = 'tree-children';
     children.style.display = 'none';
@@ -85,23 +112,6 @@ export class FileExplorer {
       <span class="tree-icon tree-icon-file">${this._getFileIcon(name)}</span>
       <span class="tree-name">${escapeHtml(name)}</span>
     `;
-
-    row.addEventListener('click', () => {
-      this.onFileOpenCallbacks.forEach(cb => cb(fullPath));
-    });
-
-    // Highlight active
-    row.addEventListener('click', () => {
-      this.container.querySelectorAll('.tree-row.active').forEach(el => el.classList.remove('active'));
-      row.classList.add('active');
-    });
-
-    // Context menu
-    row.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this._showContextMenu(e.clientX, e.clientY, fullPath);
-    });
 
     node.appendChild(row);
     return node;
