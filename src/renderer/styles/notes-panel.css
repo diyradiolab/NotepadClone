@@ -215,60 +215,12 @@
 }
 
 /* ── Delete Confirmation Overlay ── */
-.notes-confirm-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--overlay-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
 .notes-confirm-dialog {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-primary);
-  border-radius: 6px;
   padding: 16px 20px;
   min-width: 280px;
-  box-shadow: 0 4px 16px var(--menu-shadow);
-  color: var(--text-primary);
 }
 
 .notes-confirm-dialog p {
   margin-bottom: 12px;
   font-size: 13px;
-}
-
-.notes-confirm-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.notes-confirm-buttons button {
-  padding: 4px 16px;
-  border: 1px solid var(--border-secondary);
-  border-radius: 3px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.notes-confirm-buttons button:hover {
-  background: var(--bg-toolbar-hover);
-}
-
-.notes-confirm-buttons button.danger {
-  background: var(--tab-close-hover-bg);
-  border-color: var(--tab-close-hover-bg);
-  color: #ffffff;
-}
-
-.notes-confirm-buttons button.danger:hover {
-  opacity: 0.9;
 }

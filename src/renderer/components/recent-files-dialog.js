@@ -20,18 +20,18 @@ export class RecentFilesDialog {
     const files = await window.api.getRecentFiles();
 
     this.overlay = document.createElement('div');
-    this.overlay.className = 'recent-files-overlay';
+    this.overlay.className = 'recent-files-overlay dialog-overlay';
     this.overlay.innerHTML = `
-      <div class="recent-files-dialog">
-        <div class="recent-files-header">
-          <span class="recent-files-title">Recent Files</span>
+      <div class="recent-files-dialog dialog-box">
+        <div class="recent-files-header dialog-header">
+          <span class="recent-files-title dialog-title">Recent Files</span>
           <span class="recent-files-count">${files.length} files</span>
         </div>
-        <input type="text" class="recent-files-search" placeholder="Search by filename or path..." autofocus>
+        <input type="text" class="recent-files-search dialog-search" placeholder="Search by filename or path..." autofocus>
         <div class="recent-files-list"></div>
-        <div class="recent-files-footer">
-          <button class="recent-files-clear">Clear All</button>
-          <button class="recent-files-close">Close</button>
+        <div class="recent-files-footer dialog-footer">
+          <button class="recent-files-clear dialog-btn">Clear All</button>
+          <button class="recent-files-close dialog-btn">Close</button>
         </div>
       </div>
     `;

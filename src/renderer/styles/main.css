@@ -379,8 +379,8 @@ html, body {
   background: var(--menu-hover);
 }
 
-/* ── Go To Line Dialog ── */
-.goto-line-overlay {
+/* ── Shared Dialog Styles ── */
+.dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -393,14 +393,98 @@ html, body {
   z-index: 2000;
 }
 
-.goto-line-dialog {
+.dialog-box {
   background: var(--bg-surface);
   border: 1px solid var(--border-primary);
   border-radius: 6px;
-  padding: 16px 20px;
-  min-width: 300px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 16px var(--menu-shadow);
   color: var(--text-primary);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+}
+
+.dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.dialog-btn {
+  padding: 4px 16px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dialog-btn:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.dialog-btn-primary {
+  background: var(--text-accent);
+  border-color: var(--text-accent);
+  color: #ffffff;
+}
+
+.dialog-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.dialog-btn-danger {
+  background: var(--tab-close-hover-bg);
+  border-color: var(--tab-close-hover-bg);
+  color: #ffffff;
+}
+
+.dialog-btn-danger:hover {
+  opacity: 0.9;
+}
+
+.dialog-search {
+  margin: 0 16px 8px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.dialog-search:focus {
+  border-color: var(--input-border-focus);
+}
+
+.dialog-empty {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Go To Line Dialog ── */
+.goto-line-dialog {
+  padding: 16px 20px;
+  min-width: 300px;
 }
 
 .goto-line-dialog label {
@@ -427,34 +511,7 @@ html, body {
 }
 
 .goto-line-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   margin-top: 12px;
-}
-
-.goto-line-buttons button {
-  padding: 4px 16px;
-  border: 1px solid var(--border-secondary);
-  border-radius: 3px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.goto-line-buttons button:hover {
-  background: var(--bg-toolbar-hover);
-}
-
-.goto-line-buttons button.primary {
-  background: var(--text-accent);
-  border-color: var(--text-accent);
-  color: #ffffff;
-}
-
-.goto-line-buttons button.primary:hover {
-  opacity: 0.9;
 }
 
 /* ── EOL Markers (Show All Characters) ── */

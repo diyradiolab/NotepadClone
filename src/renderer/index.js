@@ -1542,14 +1542,14 @@ function showGoToLineDialog() {
   const totalLines = model ? model.getLineCount() : 1;
 
   const overlay = document.createElement('div');
-  overlay.className = 'goto-line-overlay';
+  overlay.className = 'goto-line-overlay dialog-overlay';
   overlay.innerHTML = `
-    <div class="goto-line-dialog">
+    <div class="goto-line-dialog dialog-box">
       <label>Go to Line (1 - ${totalLines}):</label>
       <input type="number" id="goto-line-input" min="1" max="${totalLines}" value="${editor.getPosition().lineNumber}">
-      <div class="goto-line-buttons">
-        <button id="goto-line-cancel">Cancel</button>
-        <button id="goto-line-go" class="primary">Go</button>
+      <div class="goto-line-buttons dialog-footer">
+        <button id="goto-line-cancel" class="dialog-btn">Cancel</button>
+        <button id="goto-line-go" class="dialog-btn dialog-btn-primary">Go</button>
       </div>
     </div>
   `;

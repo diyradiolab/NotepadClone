@@ -403,13 +403,13 @@ export class NotesPanel {
 
   _showConfirmDialog(message, onConfirm) {
     const overlay = document.createElement('div');
-    overlay.className = 'notes-confirm-overlay';
+    overlay.className = 'notes-confirm-overlay dialog-overlay';
     overlay.innerHTML = `
-      <div class="notes-confirm-dialog">
+      <div class="notes-confirm-dialog dialog-box">
         <p>${message}</p>
-        <div class="notes-confirm-buttons">
-          <button class="cancel-btn">Cancel</button>
-          <button class="danger confirm-btn">Delete</button>
+        <div class="notes-confirm-buttons dialog-footer">
+          <button class="cancel-btn dialog-btn">Cancel</button>
+          <button class="confirm-btn dialog-btn dialog-btn-danger">Delete</button>
         </div>
       </div>
     `;

@@ -35,15 +35,15 @@ export class GitCommitDialog {
     }
 
     this.overlay = document.createElement('div');
-    this.overlay.className = 'git-commit-overlay';
+    this.overlay.className = 'git-commit-overlay dialog-overlay';
     this.overlay.innerHTML = `
-      <div class="git-commit-dialog">
-        <div class="git-commit-header">Commit to <strong>${escapeHtml(branch)}</strong></div>
+      <div class="git-commit-dialog dialog-box">
+        <div class="git-commit-header dialog-title">Commit to <strong>${escapeHtml(branch)}</strong></div>
         <div class="git-commit-files">${fileListHtml}</div>
         <textarea class="git-commit-textarea" placeholder="Enter commit message..." autofocus></textarea>
-        <div class="git-commit-footer">
-          <button class="git-commit-cancel">Cancel</button>
-          <button class="git-commit-ok primary">Commit</button>
+        <div class="git-commit-footer dialog-footer">
+          <button class="git-commit-cancel dialog-btn">Cancel</button>
+          <button class="git-commit-ok dialog-btn dialog-btn-primary">Commit</button>
         </div>
       </div>
     `;

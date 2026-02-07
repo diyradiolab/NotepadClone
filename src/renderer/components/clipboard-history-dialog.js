@@ -20,18 +20,18 @@ export class ClipboardHistoryDialog {
     const entries = await window.api.getClipboardRing();
 
     this.overlay = document.createElement('div');
-    this.overlay.className = 'clipboard-history-overlay';
+    this.overlay.className = 'clipboard-history-overlay dialog-overlay';
     this.overlay.innerHTML = `
-      <div class="clipboard-history-dialog">
-        <div class="clipboard-history-header">
-          <span class="clipboard-history-title">Clipboard History</span>
+      <div class="clipboard-history-dialog dialog-box">
+        <div class="clipboard-history-header dialog-header">
+          <span class="clipboard-history-title dialog-title">Clipboard History</span>
           <span class="clipboard-history-count">${entries.length} items</span>
         </div>
-        <input type="text" class="clipboard-history-search" placeholder="Search clipboard..." autofocus>
+        <input type="text" class="clipboard-history-search dialog-search" placeholder="Search clipboard..." autofocus>
         <div class="clipboard-history-list"></div>
-        <div class="clipboard-history-footer">
-          <button class="clipboard-history-clear">Clear History</button>
-          <button class="clipboard-history-close">Close</button>
+        <div class="clipboard-history-footer dialog-footer">
+          <button class="clipboard-history-clear dialog-btn">Clear History</button>
+          <button class="clipboard-history-close dialog-btn">Close</button>
         </div>
       </div>
     `;

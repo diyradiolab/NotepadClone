@@ -27,22 +27,22 @@ export class CompareTabDialog {
     }
 
     this.overlay = document.createElement('div');
-    this.overlay.className = 'compare-dialog-overlay';
+    this.overlay.className = 'compare-dialog-overlay dialog-overlay';
 
     if (eligible.length === 0) {
       this.overlay.innerHTML = `
-        <div class="compare-dialog">
-          <div class="compare-dialog-header">Compare Active Tab With...</div>
-          <div class="compare-dialog-empty">No other tabs available for comparison</div>
-          <div class="compare-dialog-footer">
-            <button class="compare-dialog-close">Close</button>
+        <div class="compare-dialog dialog-box">
+          <div class="compare-dialog-header dialog-title">Compare Active Tab With...</div>
+          <div class="compare-dialog-empty dialog-empty">No other tabs available for comparison</div>
+          <div class="compare-dialog-footer dialog-footer">
+            <button class="compare-dialog-close dialog-btn">Close</button>
           </div>
         </div>
       `;
     } else {
       this.overlay.innerHTML = `
-        <div class="compare-dialog">
-          <div class="compare-dialog-header">Compare Active Tab With...</div>
+        <div class="compare-dialog dialog-box">
+          <div class="compare-dialog-header dialog-title">Compare Active Tab With...</div>
           <div class="compare-dialog-list">
             ${eligible.map(t => `
               <div class="compare-dialog-item" data-tab-id="${t.tabId}">
@@ -51,8 +51,8 @@ export class CompareTabDialog {
               </div>
             `).join('')}
           </div>
-          <div class="compare-dialog-footer">
-            <button class="compare-dialog-close">Close</button>
+          <div class="compare-dialog-footer dialog-footer">
+            <button class="compare-dialog-close dialog-btn">Close</button>
           </div>
         </div>
       `;
