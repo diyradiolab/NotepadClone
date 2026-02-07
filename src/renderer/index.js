@@ -1488,9 +1488,17 @@ function toggleColumnSelection() {
 
 // ── Go To Line Dialog ──
 
+let goToLineOverlay = null;
+
 function showGoToLineDialog() {
   const editor = editorManager.getActiveEditor();
   if (!editor) return;
+
+  // Close existing dialog if open
+  if (goToLineOverlay) {
+    goToLineOverlay.remove();
+    goToLineOverlay = null;
+  }
 
   const model = editor.getModel();
   const totalLines = model ? model.getLineCount() : 1;
@@ -1508,8 +1516,9 @@ function showGoToLineDialog() {
     </div>
   `;
   document.body.appendChild(overlay);
+  goToLineOverlay = overlay;
 
-  const input = document.getElementById('goto-line-input');
+  const input = overlay.querySelector('#goto-line-input');
   input.select();
   input.focus();
 
@@ -1524,11 +1533,12 @@ function showGoToLineDialog() {
   }
 
   function close() {
-    document.body.removeChild(overlay);
+    overlay.remove();
+    goToLineOverlay = null;
   }
 
-  document.getElementById('goto-line-go').addEventListener('click', goToLine);
-  document.getElementById('goto-line-cancel').addEventListener('click', close);
+  overlay.querySelector('#goto-line-go').addEventListener('click', goToLine);
+  overlay.querySelector('#goto-line-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) close();
   });

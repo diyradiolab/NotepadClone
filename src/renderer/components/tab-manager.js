@@ -263,7 +263,18 @@ export class TabManager {
     this._contextMenu = document.createElement('div');
     this._contextMenu.className = 'tab-context-menu';
     this._contextMenu.style.display = 'none';
+    this._contextMenuActions = [];
     document.body.appendChild(this._contextMenu);
+
+    // Single delegated click handler — no per-item listeners needed
+    this._contextMenu.addEventListener('click', (e) => {
+      const item = e.target.closest('.context-menu-item');
+      if (!item) return;
+      e.stopPropagation();
+      this._contextMenu.style.display = 'none';
+      const idx = parseInt(item.dataset.index, 10);
+      if (this._contextMenuActions[idx]) this._contextMenuActions[idx]();
+    });
 
     document.addEventListener('click', () => {
       this._contextMenu.style.display = 'none';
@@ -271,24 +282,18 @@ export class TabManager {
   }
 
   _showContextMenu(x, y, tabId) {
-    const items = [
-      { label: 'Close', action: () => this.closeTab(tabId) },
-      { label: 'Close Others', action: () => this.closeOtherTabs(tabId) },
-      { label: 'Close Tabs to the Right', action: () => this.closeTabsToRight(tabId) },
-      { label: 'Close All', action: () => this.closeAllTabs() },
+    this._contextMenuActions = [
+      () => this.closeTab(tabId),
+      () => this.closeOtherTabs(tabId),
+      () => this.closeTabsToRight(tabId),
+      () => this.closeAllTabs(),
     ];
 
-    this._contextMenu.innerHTML = items.map(item =>
-      `<div class="context-menu-item">${item.label}</div>`
-    ).join('');
+    const labels = ['Close', 'Close Others', 'Close Tabs to the Right', 'Close All'];
 
-    this._contextMenu.querySelectorAll('.context-menu-item').forEach((el, i) => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._contextMenu.style.display = 'none';
-        items[i].action();
-      });
-    });
+    this._contextMenu.innerHTML = labels.map((label, i) =>
+      `<div class="context-menu-item" data-index="${i}">${label}</div>`
+    ).join('');
 
     this._contextMenu.style.display = 'block';
     this._contextMenu.style.left = `${x}px`;
