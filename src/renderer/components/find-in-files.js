@@ -12,6 +12,7 @@ export class FindInFiles {
 
   _render() {
     this.container.innerHTML = `
+      <div class="fif-resize-handle" id="fif-resize-handle"></div>
       <div class="fif-header">
         <span class="fif-title">FIND IN FILES</span>
         <button class="fif-close-btn" title="Close">\u00D7</button>
@@ -22,6 +23,12 @@ export class FindInFiles {
         <label class="fif-option"><input type="checkbox" id="fif-case"> Match Case</label>
         <button class="fif-search-btn" id="fif-search-btn">Search</button>
       </div>
+      <div class="fif-search-bar fif-search-row2">
+        <input type="text" class="fif-input fif-dir-input" id="fif-dir" placeholder="Search directory..." readonly />
+        <button class="fif-browse-btn" id="fif-browse-btn" title="Browse folder">\uD83D\uDCC1</button>
+        <input type="text" class="fif-input fif-filter-input" id="fif-filter" placeholder="*.js, *.ts" title="File filter (comma-separated globs)" />
+        <input type="number" class="fif-input fif-depth-input" id="fif-depth" placeholder="\u221E" min="1" title="Max depth (empty = unlimited)" />
+      </div>
       <div class="fif-status" id="fif-status"></div>
       <div class="fif-results" id="fif-results"></div>
     `;
@@ -30,31 +37,60 @@ export class FindInFiles {
 
     const queryInput = this.container.querySelector('#fif-query');
     const searchBtn = this.container.querySelector('#fif-search-btn');
+    const browseBtn = this.container.querySelector('#fif-browse-btn');
 
     searchBtn.addEventListener('click', () => this._doSearch());
     queryInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._doSearch();
       if (e.key === 'Escape') this.hide();
     });
+
+    // Allow Enter in filter/depth to trigger search
+    this.container.querySelector('#fif-filter').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._doSearch();
+      if (e.key === 'Escape') this.hide();
+    });
+    this.container.querySelector('#fif-depth').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._doSearch();
+      if (e.key === 'Escape') this.hide();
+    });
+
+    this._initResize();
+
+    browseBtn.addEventListener('click', async () => {
+      const folder = await window.api.pickFolder();
+      if (folder) {
+        this.searchDir = folder;
+        this.container.querySelector('#fif-dir').value = folder;
+      }
+    });
   }
 
   async _doSearch() {
     const query = this.container.querySelector('#fif-query').value.trim();
     if (!query) return;
-    if (!this.searchDir) {
-      this._setStatus('No folder open. Use File > Open Folder first.');
+
+    // Use the directory field if set, otherwise fall back to the default searchDir
+    const dirInput = this.container.querySelector('#fif-dir').value.trim();
+    const searchDir = dirInput || this.searchDir;
+
+    if (!searchDir) {
+      this._setStatus('No folder open. Use File > Open Folder or browse for a folder.');
       return;
     }
 
     const useRegex = this.container.querySelector('#fif-regex').checked;
     const caseSensitive = this.container.querySelector('#fif-case').checked;
+    const fileFilter = this.container.querySelector('#fif-filter').value.trim();
+    const depthVal = this.container.querySelector('#fif-depth').value.trim();
+    const maxDepth = depthVal ? parseInt(depthVal, 10) : null;
     const resultsEl = this.container.querySelector('#fif-results');
 
     this._setStatus('Searching...');
     resultsEl.innerHTML = '';
 
     const { results, truncated, error } = await window.api.searchInFiles(
-      this.searchDir, query, useRegex, caseSensitive
+      searchDir, query, useRegex, caseSensitive, fileFilter || null, maxDepth
     );
 
     if (error) {
@@ -64,6 +100,17 @@ export class FindInFiles {
 
     const statusText = `${results.length} match${results.length !== 1 ? 'es' : ''}${truncated ? ' (results truncated)' : ''}`;
     this._setStatus(statusText);
+
+    // Build regex for highlighting matches in results
+    let highlightPattern;
+    try {
+      const flags = caseSensitive ? 'g' : 'gi';
+      highlightPattern = useRegex
+        ? new RegExp(query, flags)
+        : new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    } catch {
+      highlightPattern = null;
+    }
 
     // Group by file
     const grouped = new Map();
@@ -76,27 +123,101 @@ export class FindInFiles {
       const fileEl = document.createElement('div');
       fileEl.className = 'fif-file-group';
 
-      const shortPath = this.searchDir
-        ? filePath.replace(this.searchDir, '').replace(/^[/\\]/, '')
+      const shortPath = searchDir
+        ? filePath.replace(searchDir, '').replace(/^[/\\]/, '')
         : filePath;
 
       const headerEl = document.createElement('div');
       headerEl.className = 'fif-file-header';
-      headerEl.textContent = `${shortPath} (${matches.length})`;
+      headerEl.innerHTML = `<span class="fif-collapse-icon">\u25BC</span> ${this._escapeHtml(shortPath)} (${matches.length})`;
+      headerEl.addEventListener('click', () => {
+        fileEl.classList.toggle('collapsed');
+        const icon = headerEl.querySelector('.fif-collapse-icon');
+        icon.textContent = fileEl.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+      });
       fileEl.appendChild(headerEl);
+
+      const linesContainer = document.createElement('div');
+      linesContainer.className = 'fif-file-lines';
 
       for (const match of matches) {
         const lineEl = document.createElement('div');
         lineEl.className = 'fif-result-line';
-        lineEl.innerHTML = `<span class="fif-line-num">${match.line}:</span> ${this._escapeHtml(match.text)}`;
+
+        const lineNumSpan = `<span class="fif-line-num">${match.line}:</span> `;
+        const highlightedText = this._highlightMatches(match.text, highlightPattern);
+        lineEl.innerHTML = lineNumSpan + highlightedText;
+
         lineEl.addEventListener('click', () => {
           this.onResultClickCallbacks.forEach(cb => cb(match.filePath, match.line));
         });
-        fileEl.appendChild(lineEl);
+        linesContainer.appendChild(lineEl);
       }
 
+      fileEl.appendChild(linesContainer);
       resultsEl.appendChild(fileEl);
     }
+  }
+
+  _highlightMatches(text, pattern) {
+    const escaped = this._escapeHtml(text);
+    if (!pattern) return escaped;
+
+    // We need to highlight on the escaped HTML. Re-run pattern on original text
+    // to find match positions, then apply to escaped text.
+    // Simpler approach: run replace on escaped text with an escaped version of the pattern.
+    // Safest: replace on original text, then escape each segment.
+    const segments = [];
+    let lastIndex = 0;
+    pattern.lastIndex = 0;
+    let m;
+    while ((m = pattern.exec(text)) !== null) {
+      if (m.index > lastIndex) {
+        segments.push({ text: text.slice(lastIndex, m.index), highlight: false });
+      }
+      segments.push({ text: m[0], highlight: true });
+      lastIndex = m.index + m[0].length;
+      if (m[0].length === 0) { pattern.lastIndex++; lastIndex++; }
+    }
+    if (lastIndex < text.length) {
+      segments.push({ text: text.slice(lastIndex), highlight: false });
+    }
+
+    return segments.map(s =>
+      s.highlight
+        ? `<span class="fif-match">${this._escapeHtml(s.text)}</span>`
+        : this._escapeHtml(s.text)
+    ).join('');
+  }
+
+  _initResize() {
+    const handle = this.container.querySelector('#fif-resize-handle');
+    let startY, startHeight;
+
+    const onMouseMove = (e) => {
+      const delta = startY - e.clientY;
+      const newHeight = Math.max(150, Math.min(window.innerHeight * 0.8, startHeight + delta));
+      this.container.style.height = newHeight + 'px';
+    };
+
+    const onMouseUp = () => {
+      handle.classList.remove('fif-dragging');
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      startHeight = this.container.offsetHeight;
+      handle.classList.add('fif-dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
   }
 
   _setStatus(text) {
@@ -105,6 +226,8 @@ export class FindInFiles {
 
   setSearchDir(dirPath) {
     this.searchDir = dirPath;
+    const dirInput = this.container.querySelector('#fif-dir');
+    if (dirInput) dirInput.value = dirPath;
   }
 
   show() {

@@ -35,8 +35,9 @@ contextBridge.exposeInMainWorld('api', {
   clearRecentFiles: () => ipcRenderer.invoke('renderer:clear-recent-files'),
 
   // Find in files
-  searchInFiles: (dirPath, query, useRegex, caseSensitive) =>
-    ipcRenderer.invoke('renderer:search-in-files', { dirPath, query, useRegex, caseSensitive }),
+  pickFolder: () => ipcRenderer.invoke('renderer:pick-folder'),
+  searchInFiles: (dirPath, query, useRegex, caseSensitive, fileFilter, maxDepth) =>
+    ipcRenderer.invoke('renderer:search-in-files', { dirPath, query, useRegex, caseSensitive, fileFilter, maxDepth }),
 
   // Large file operations
   openLargeFile: (filePath) => ipcRenderer.invoke('renderer:open-large-file', filePath),

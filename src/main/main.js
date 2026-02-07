@@ -416,6 +416,16 @@ ipcMain.handle('renderer:show-save-dialog', async (_event, fileName) => {
   return ['save', 'discard', 'cancel'][response];
 });
 
+// ── Pick Folder (for Find in Files) ──
+
+ipcMain.handle('renderer:pick-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  });
+  if (result.canceled) return null;
+  return result.filePaths[0];
+});
+
 // ── Find in Files ──
 
 const BINARY_EXTENSIONS = new Set([
@@ -430,7 +440,7 @@ const BINARY_EXTENSIONS = new Set([
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.hg', '.svn', 'dist', 'build', '.next', '__pycache__']);
 
-ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useRegex, caseSensitive, maxResults }) => {
+ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useRegex, caseSensitive, maxResults, fileFilter, maxDepth }) => {
   const results = [];
   maxResults = maxResults || 500;
 
@@ -442,7 +452,26 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     return { results: [], error: 'Invalid regex' };
   }
 
-  async function searchDir(dir) {
+  // Parse file filter globs (e.g. "*.js, *.ts") into a set of extensions
+  let filterExts = null;
+  if (fileFilter && fileFilter.trim()) {
+    filterExts = new Set();
+    for (const glob of fileFilter.split(',')) {
+      const g = glob.trim();
+      if (!g) continue;
+      // Support *.ext patterns — extract the extension
+      const m = g.match(/^\*\.(\S+)$/);
+      if (m) {
+        filterExts.add(m[1].toLowerCase());
+      }
+    }
+    if (filterExts.size === 0) filterExts = null;
+  }
+
+  // Normalize maxDepth: null/0/undefined = unlimited
+  const depthLimit = (maxDepth && maxDepth > 0) ? maxDepth : null;
+
+  async function searchDir(dir, depth) {
     if (results.length >= maxResults) return;
 
     let entries;
@@ -459,14 +488,17 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) {
-          await searchDir(fullPath);
+        if (!SKIP_DIRS.has(entry.name) && (depthLimit === null || depth < depthLimit)) {
+          await searchDir(fullPath, depth + 1);
         }
         continue;
       }
 
       const ext = entry.name.split('.').pop().toLowerCase();
       if (BINARY_EXTENSIONS.has(ext)) continue;
+
+      // Apply file filter
+      if (filterExts && !filterExts.has(ext)) continue;
 
       // Skip large files
       try {
@@ -498,7 +530,7 @@ ipcMain.handle('renderer:search-in-files', async (_event, { dirPath, query, useR
     }
   }
 
-  await searchDir(dirPath);
+  await searchDir(dirPath, 0);
   return { results, truncated: results.length >= maxResults };
 });
 
