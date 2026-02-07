@@ -10,6 +10,7 @@ import './styles/git-commit-dialog.css';
 import './styles/sql-query-panel.css';
 import './styles/git-history-panel.css';
 import './styles/markdown-preview.css';
+import './styles/table-viewer.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -24,6 +25,7 @@ import { SqlQueryPanel } from './components/sql-query-panel';
 import { GitHistoryPanel } from './components/git-history-panel';
 import { setEditorTheme } from './editor/monaco-setup';
 import { MarkdownPreview } from './components/markdown-preview';
+import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/table-viewer';
 
 // ── Initialize Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -45,12 +47,28 @@ const compareTabDialog = new CompareTabDialog();
 const gitCommitDialog = new GitCommitDialog();
 const gitHistoryPanel = new GitHistoryPanel(tabManager, editorManager);
 const markdownPreview = new MarkdownPreview(editorContainer);
+const tableViewer = new TableViewer(editorContainer);
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
 sqlQueryPanel.onRowClick((lineNumber) => {
   const tabId = tabManager.getActiveTabId();
   if (tabId) editorManager.revealLine(tabId, lineNumber);
+});
+
+tableViewer.onRowClick((lineNumber) => {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isTableFile) return;
+  // Switch to editor mode, then jump to line
+  tab.tableMode = 'edit';
+  tableViewer.destroy();
+  editorManager.activateTab(tabId);
+  updateTableToolbar(true, 'edit');
+  updateMarkdownToolbar(false);
+  const langInfo = editorManager.getLanguageInfo(tabId);
+  statusBar.updateLanguage(langInfo.displayName);
+  editorManager.revealLine(tabId, lineNumber);
 });
 
 compareTabDialog.onSelect((otherTabId) => {
@@ -461,14 +479,99 @@ document.getElementById('markdown-format-toolbar').addEventListener('click', (e)
   formatMarkdown(btn.dataset.mdAction, editorManager.getActiveEditor());
 });
 
+// ── Table Viewer ──
+
+const tvToggleBtn = document.getElementById('btn-table-toggle');
+const tvSeparator = document.getElementById('tv-separator');
+const tvToggleIcon = document.getElementById('tv-toggle-icon');
+
+const TV_ICON_GRID = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><line x1="1.5" y1="5.5" x2="14.5" y2="5.5"/><line x1="1.5" y1="9" x2="14.5" y2="9"/><line x1="5.5" y1="5.5" x2="5.5" y2="14"/><line x1="10.5" y1="5.5" x2="10.5" y2="14"/></svg>';
+const TV_ICON_PENCIL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/></svg>';
+
+function updateTableToolbar(isTable, mode) {
+  if (!isTable) {
+    tvToggleBtn.style.display = 'none';
+    tvSeparator.style.display = 'none';
+    return;
+  }
+  tvToggleBtn.style.display = '';
+  tvSeparator.style.display = '';
+  if (mode === 'table') {
+    tvToggleIcon.innerHTML = TV_ICON_PENCIL;
+    tvToggleBtn.title = 'Switch to Editor (Ctrl+Shift+T)';
+  } else {
+    tvToggleIcon.innerHTML = TV_ICON_GRID;
+    tvToggleBtn.title = 'Switch to Table View (Ctrl+Shift+T)';
+  }
+}
+
+function toggleTableMode() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isTableFile) return;
+
+  const entry = editorManager.editors.get(tabId);
+
+  if (tab.tableMode === 'table') {
+    // Switch to editor
+    tab.tableMode = 'edit';
+    tableViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateTableToolbar(true, 'edit');
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else {
+    // Switch to table — save editor state first
+    const editor = editorManager.getActiveEditor();
+    if (editor && entry) {
+      entry.viewState = editor.saveViewState();
+      editor.dispose();
+      entry.editor = null;
+    }
+    tab.tableMode = 'table';
+    editorManager.container.innerHTML = '';
+    const content = entry.model.getValue();
+    tableViewer.render(content, tab.title);
+    updateTableToolbar(true, 'table');
+    statusBar.updateLanguage('Table View');
+  }
+}
+
+function isTableExtension(filename) {
+  if (!filename) return false;
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.csv') || lower.endsWith('.tsv');
+}
+
 // ── Tab ↔ Editor Wiring ──
 
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
-  if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
+  if (tab && tab.isTableFile && tab.tableMode === 'table') {
+    // Table view mode: deactivate previous tab manually, then render table
+    if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
+      const current = editorManager.editors.get(editorManager.activeTabId);
+      if (current.isDiffTab) {
+        if (current.diffEditor) { current.diffEditor.dispose(); current.diffEditor = null; }
+      } else if (current.editor) {
+        current.viewState = current.editor.saveViewState();
+        current.editor.dispose();
+        current.editor = null;
+      }
+    }
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const entry = editorManager.editors.get(tabId);
+    if (entry) {
+      const content = entry.model.getValue();
+      tableViewer.render(content, tab.title);
+    }
+    statusBar.updateLanguage('Table View');
+    updateTableToolbar(true, 'table');
+    updateMarkdownToolbar(false);
+  } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
     // Markdown read mode: deactivate previous tab manually, then render preview
-    // We can't call editorManager.activateTab() because it would create an editor
     if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
       const current = editorManager.editors.get(editorManager.activeTabId);
       if (current.isDiffTab) {
@@ -488,6 +591,7 @@ tabManager.onActivate((tabId) => {
     }
     statusBar.updateLanguage('Markdown (Read)');
     updateMarkdownToolbar(true, 'read');
+    updateTableToolbar(false);
   } else if (tab && tab.isLargeFile) {
     // Show large file viewer
     editorContainer.innerHTML = '';
@@ -497,6 +601,7 @@ tabManager.onActivate((tabId) => {
     }
     statusBar.updateLanguage('Large File');
     updateMarkdownToolbar(false);
+    updateTableToolbar(false);
   } else if (tab && tab.isHistoryTab) {
     const entry = editorManager.editors.get(tabId);
     if (entry) {
@@ -506,10 +611,12 @@ tabManager.onActivate((tabId) => {
     }
     statusBar.updateLanguage('Git History');
     updateMarkdownToolbar(false);
+    updateTableToolbar(false);
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
     updateMarkdownToolbar(false);
+    updateTableToolbar(false);
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
@@ -517,8 +624,14 @@ tabManager.onActivate((tabId) => {
     // Show markdown toolbar if this is a .md file in edit mode
     if (tab && tab.isMarkdown) {
       updateMarkdownToolbar(true, 'edit');
+      updateTableToolbar(false);
+    } else if (tab && tab.isTableFile) {
+      // Table file in edit mode
+      updateTableToolbar(true, 'edit');
+      updateMarkdownToolbar(false);
     } else {
       updateMarkdownToolbar(false);
+      updateTableToolbar(false);
     }
   }
 
@@ -539,6 +652,11 @@ tabManager.onClose((tabId) => {
   // Clean up markdown preview if active
   if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
     markdownPreview.destroy();
+  }
+
+  // Clean up table viewer if active
+  if (tab && tab.isTableFile && tab.tableMode === 'table') {
+    tableViewer.destroy();
   }
 
   // Clean up history tab
@@ -695,12 +813,31 @@ async function openFileByPath(filePath, lineNumber) {
     tab.markdownMode = 'read';
   }
 
+  // Detect table files — default to table mode
+  if (isTableExtension(filename)) {
+    const tab = tabManager.getTab(tabId);
+    tab.isTableFile = true;
+    tab.tableMode = 'table';
+  } else if (filename.toLowerCase().endsWith('.json')) {
+    if (isTableJSON(file.content)) {
+      const tab = tabManager.getTab(tabId);
+      tab.isTableFile = true;
+      tab.tableMode = 'table';
+    }
+  } else if (filename.toLowerCase().endsWith('.xml')) {
+    if (isTableXML(file.content)) {
+      const tab = tabManager.getTab(tabId);
+      tab.isTableFile = true;
+      tab.tableMode = 'table';
+    }
+  }
+
   tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  // Language display is set by onActivate for markdown, but keep for non-md
-  if (!isMarkdownFile(filename)) {
+  // Language display is set by onActivate for markdown/table, but keep for others
+  if (!isMarkdownFile(filename) && !(tabManager.getTab(tabId) && tabManager.getTab(tabId).isTableFile)) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
@@ -746,11 +883,30 @@ async function openFile() {
       tab.markdownMode = 'read';
     }
 
+    // Detect table files — default to table mode
+    if (isTableExtension(filename)) {
+      const tab = tabManager.getTab(tabId);
+      tab.isTableFile = true;
+      tab.tableMode = 'table';
+    } else if (filename.toLowerCase().endsWith('.json')) {
+      if (isTableJSON(file.content)) {
+        const tab = tabManager.getTab(tabId);
+        tab.isTableFile = true;
+        tab.tableMode = 'table';
+      }
+    } else if (filename.toLowerCase().endsWith('.xml')) {
+      if (isTableXML(file.content)) {
+        const tab = tabManager.getTab(tabId);
+        tab.isTableFile = true;
+        tab.tableMode = 'table';
+      }
+    }
+
     tabManager.activate(tabId); // onActivate routing handles preview vs editor
 
     statusBar.updateLineEnding(file.lineEnding || 'LF');
     statusBar.updateEncoding(file.encoding || 'UTF-8');
-    if (!isMarkdownFile(filename)) {
+    if (!isMarkdownFile(filename) && !(tabManager.getTab(tabId) && tabManager.getTab(tabId).isTableFile)) {
       statusBar.updateLanguage(langInfo.displayName);
     }
   }
@@ -957,6 +1113,11 @@ window.api.onFileChanged(async (filePath) => {
         const entry = editorManager.editors.get(tabId);
         if (entry) markdownPreview.render(entry.model.getValue(), tab.filePath);
       }
+      // Re-render table viewer if in table mode
+      if (tab.isTableFile && tab.tableMode === 'table' && tabId === tabManager.getActiveTabId()) {
+        const entry = editorManager.editors.get(tabId);
+        if (entry) tableViewer.render(entry.model.getValue(), tab.title);
+      }
     }
   }
 });
@@ -988,6 +1149,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-pull': gitPull(); break;
     case 'git-history': showGitFileHistory(); break;
     case 'markdown-toggle': toggleMarkdownMode(); break;
+    case 'table-toggle': toggleTableMode(); break;
   }
 });
 
@@ -1029,6 +1191,10 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
     e.preventDefault();
     toggleMarkdownMode();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+    e.preventDefault();
+    toggleTableMode();
   }
 });
 

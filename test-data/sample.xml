@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<employees>
+  <employee>
+    <name>Alice</name>
+    <department>Engineering</department>
+    <salary>95000</salary>
+  </employee>
+  <employee>
+    <name>Bob</name>
+    <department>Design</department>
+    <salary>85000</salary>
+  </employee>
+  <employee>
+    <name>Charlie</name>
+    <department>Management</department>
+    <salary>110000</salary>
+  </employee>
+</employees>

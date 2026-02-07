@@ -1,0 +1,139 @@
+/* ── Table Viewer ── */
+
+.tv-content {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  position: relative;
+}
+
+/* ── Status bar (row count + format) ── */
+
+.tv-status {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ── Table ── */
+
+.tv-table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ── Header ── */
+
+.tv-table thead th {
+  position: sticky;
+  top: 30px; /* below status bar */
+  z-index: 2;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  padding: 5px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tv-table thead th:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+/* ── Sort indicator ── */
+
+.tv-sort-indicator {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.tv-sort-indicator.tv-sort-active {
+  color: var(--input-border-focus);
+}
+
+/* ── Row number column (sticky left) ── */
+
+.tv-col-rownum {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  text-align: right;
+  padding: 3px 8px;
+  font-size: 11px;
+  min-width: 40px;
+  user-select: none;
+}
+
+/* Header row-num cell needs higher z-index (sticky both ways) */
+.tv-table thead th.tv-col-rownum {
+  z-index: 4;
+  cursor: default;
+}
+
+/* ── Body cells ── */
+
+.tv-table tbody td {
+  border: 1px solid var(--border-secondary);
+  padding: 3px 12px;
+  white-space: pre;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Alternating rows ── */
+
+.tv-row-even {
+  background: var(--bg-surface);
+}
+
+.tv-row-odd {
+  background: var(--bg-secondary);
+}
+
+/* ── Row hover ── */
+
+.tv-table tbody tr:hover td {
+  background: var(--bg-toolbar-hover);
+  cursor: pointer;
+}
+
+/* ── Scrollbar styling ── */
+
+.tv-content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tv-content::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.tv-content::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.tv-content::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
