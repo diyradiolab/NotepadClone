@@ -1194,7 +1194,10 @@ function showGoToLineDialog() {
     if (e.target === overlay) close();
   });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') goToLine();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      goToLine();
+    }
   });
 }
 
