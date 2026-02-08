@@ -13,6 +13,7 @@ import './styles/markdown-preview.css';
 import './styles/table-viewer.css';
 import './styles/notes-panel.css';
 import './styles/tree-viewer.css';
+import './styles/spreadsheet-viewer.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -31,6 +32,7 @@ import { MarkdownPreview } from './components/markdown-preview';
 import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/table-viewer';
 import { TreeViewer } from './components/tree-viewer';
 import { NotesPanel } from './components/notes-panel';
+import { SpreadsheetViewer } from './components/spreadsheet-viewer';
 import { formatMarkdown } from './editor/markdown-format';
 import { SQL_QUERY_HELP } from './help/sql-query-help';
 
@@ -57,6 +59,7 @@ const markdownPreview = new MarkdownPreview(editorContainer);
 const tableViewer = new TableViewer(editorContainer);
 const treeViewer = new TreeViewer(editorContainer);
 const notesPanel = new NotesPanel(document.getElementById('notes-panel'));
+const spreadsheetViewer = new SpreadsheetViewer(editorContainer);
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -65,8 +68,15 @@ sqlQueryPanel.onRowClick((lineNumber) => {
   if (!tabId) return;
   const tab = tabManager.getTab(tabId);
 
-  // If tab is in table/tree/markdown mode, switch to editor first
-  if (tab && tab.isTableFile && tab.tableMode === 'table') {
+  // If tab is in spreadsheet/table/tree/markdown mode, switch to editor first
+  if (tab && tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet') {
+    tab.spreadsheetMode = 'edit';
+    spreadsheetViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateSpreadsheetToolbar(true, 'edit');
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else if (tab && tab.isTableFile && tab.tableMode === 'table') {
     tab.tableMode = 'edit';
     tableViewer.destroy();
     editorManager.activateTab(tabId);
@@ -158,6 +168,7 @@ clipboardHistoryDialog.onPaste((text) => {
 const largeFileViewers = new Map(); // tabId → LargeFileViewer
 
 let newFileCounter = 1;
+let sheetCounter = 1;
 let currentFolderPath = null;
 
 // ── Git State ──
@@ -570,9 +581,91 @@ function isTreeFile(filename) {
   return lower.endsWith('.json') || lower.endsWith('.xml');
 }
 
+// ── Spreadsheet Viewer ──
+
+const ssToggleBtn = document.getElementById('btn-spreadsheet-toggle');
+const ssSeparator = document.getElementById('ss-separator');
+const ssToggleIcon = document.getElementById('ss-toggle-icon');
+
+const SS_ICON_FX = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><text x="2" y="12" font-size="11" fill="currentColor" stroke="none" font-family="serif" font-style="italic">fx</text></svg>';
+const SS_ICON_PENCIL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/></svg>';
+
+function updateSpreadsheetToolbar(show, mode) {
+  if (!show) {
+    ssToggleBtn.style.display = 'none';
+    ssSeparator.style.display = 'none';
+    return;
+  }
+  ssToggleBtn.style.display = '';
+  ssSeparator.style.display = '';
+  if (mode === 'spreadsheet') {
+    ssToggleIcon.innerHTML = SS_ICON_PENCIL;
+    ssToggleBtn.title = 'Switch to Editor';
+  } else {
+    ssToggleIcon.innerHTML = SS_ICON_FX;
+    ssToggleBtn.title = 'Switch to Spreadsheet View';
+  }
+}
+
+function toggleSpreadsheetMode() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isSpreadsheet) return;
+
+  const entry = editorManager.editors.get(tabId);
+
+  if (tab.spreadsheetMode === 'spreadsheet') {
+    // Switch to editor
+    tab.spreadsheetMode = 'edit';
+    spreadsheetViewer.destroy();
+    editorManager.activateTab(tabId);
+    updateSpreadsheetToolbar(true, 'edit');
+    updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
+    const langInfo = editorManager.getLanguageInfo(tabId);
+    statusBar.updateLanguage(langInfo.displayName);
+  } else {
+    // Switch to spreadsheet — save editor state first
+    const editor = editorManager.getActiveEditor();
+    if (editor && entry) {
+      entry.viewState = editor.saveViewState();
+      editor.dispose();
+      entry.editor = null;
+    }
+    tab.spreadsheetMode = 'spreadsheet';
+    // Also set tableMode to edit so table toggle shows correctly
+    if (tab.isTableFile) tab.tableMode = 'edit';
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const content = entry ? entry.model.getValue() : '';
+    spreadsheetViewer.render(content);
+    spreadsheetViewer.onChange((csv) => {
+      if (entry) entry.model.setValue(csv);
+    });
+    updateSpreadsheetToolbar(true, 'spreadsheet');
+    updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
+    statusBar.updateLanguage('Spreadsheet');
+  }
+}
+
+function newSpreadsheet() {
+  const title = `Sheet ${sheetCounter++}`;
+  const tabId = tabManager.createTab(title);
+  editorManager.createEditorForTab(tabId, '', title);
+  const tab = tabManager.getTab(tabId);
+  tab.isSpreadsheet = true;
+  tab.spreadsheetMode = 'spreadsheet';
+  tabManager.activate(tabId);
+}
+
 // ── Tab ↔ Editor Wiring ──
 
 function deactivatePreviousEditor() {
+  // Destroy spreadsheet viewer if previous tab was in spreadsheet mode
+  const prevTab = editorManager.activeTabId ? tabManager.getTab(editorManager.activeTabId) : null;
+  if (prevTab && prevTab.isSpreadsheet && prevTab.spreadsheetMode === 'spreadsheet') {
+    spreadsheetViewer.destroy();
+  }
+
   if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
     const current = editorManager.editors.get(editorManager.activeTabId);
     if (current.isDiffTab) {
@@ -588,7 +681,22 @@ function deactivatePreviousEditor() {
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
-  if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
+  if (tab && tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet') {
+    deactivatePreviousEditor();
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const entry = editorManager.editors.get(tabId);
+    const content = entry ? entry.model.getValue() : '';
+    spreadsheetViewer.render(content);
+    spreadsheetViewer.onChange((csv) => {
+      if (entry) entry.model.setValue(csv);
+    });
+    statusBar.updateLanguage('Spreadsheet');
+    updateSpreadsheetToolbar(true, 'spreadsheet');
+    updateTableToolbar(false);
+    updateTreeToolbar(false);
+    updateMarkdownToolbar(false);
+  } else if (tab && tab.isTreeFile && tab.treeMode === 'tree') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
     editorManager.activeTabId = tabId;
@@ -601,6 +709,7 @@ tabManager.onActivate((tabId) => {
     updateTreeToolbar(true, 'tree');
     updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
+    updateSpreadsheetToolbar(false);
   } else if (tab && tab.isTableFile && tab.tableMode === 'table') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
@@ -614,6 +723,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(true, 'table');
     updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
+    updateSpreadsheetToolbar(tab.isSpreadsheet || false, tab.isSpreadsheet ? 'edit' : undefined);
   } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
@@ -627,6 +737,7 @@ tabManager.onActivate((tabId) => {
     updateMarkdownToolbar(true, 'read');
     updateTableToolbar(false);
     updateTreeToolbar(false);
+    updateSpreadsheetToolbar(false);
   } else if (tab && tab.isLargeFile) {
     // Show large file viewer
     editorContainer.innerHTML = '';
@@ -638,6 +749,7 @@ tabManager.onActivate((tabId) => {
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
     updateTreeToolbar(false);
+    updateSpreadsheetToolbar(false);
   } else if (tab && tab.isHistoryTab) {
     const entry = editorManager.editors.get(tabId);
     if (entry) {
@@ -649,12 +761,14 @@ tabManager.onActivate((tabId) => {
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
     updateTreeToolbar(false);
+    updateSpreadsheetToolbar(false);
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
     updateMarkdownToolbar(false);
     updateTableToolbar(false);
     updateTreeToolbar(false);
+    updateSpreadsheetToolbar(false);
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
@@ -664,20 +778,24 @@ tabManager.onActivate((tabId) => {
       updateMarkdownToolbar(true, 'edit');
       updateTableToolbar(false);
       updateTreeToolbar(false);
+      updateSpreadsheetToolbar(false);
     } else if (tab && tab.isTableFile) {
       // Table file in edit mode
       updateTableToolbar(true, 'edit');
       updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
       updateMarkdownToolbar(false);
+      updateSpreadsheetToolbar(tab.isSpreadsheet || false, tab.isSpreadsheet ? 'edit' : undefined);
     } else if (tab && tab.isTreeFile) {
       // Tree file in edit mode (not table-compatible)
       updateTreeToolbar(true, 'edit');
       updateTableToolbar(false);
       updateMarkdownToolbar(false);
+      updateSpreadsheetToolbar(false);
     } else {
       updateMarkdownToolbar(false);
       updateTableToolbar(false);
       updateTreeToolbar(false);
+      updateSpreadsheetToolbar(false);
     }
   }
 
@@ -693,6 +811,11 @@ tabManager.onClose((tabId) => {
   const tab = tabManager.getTab(tabId);
   if (tab && tab.filePath) {
     window.api.unwatchFile(tab.filePath);
+  }
+
+  // Clean up spreadsheet viewer if active
+  if (tab && tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet') {
+    spreadsheetViewer.destroy();
   }
 
   // Clean up markdown preview if active
@@ -893,6 +1016,9 @@ function createTabForFile(file) {
   if (tableCheck === true) {
     tab.isTableFile = true;
     tab.tableMode = 'table';
+    // CSV/TSV files also support spreadsheet mode
+    tab.isSpreadsheet = true;
+    tab.spreadsheetMode = 'edit'; // default to table view, spreadsheet available via toggle
   } else if (tableCheck === 'maybe') {
     if ((filename.toLowerCase().endsWith('.json') && isTableJSON(file.content)) ||
         (filename.toLowerCase().endsWith('.xml') && isTableXML(file.content))) {
@@ -1256,6 +1382,16 @@ window.api.onFileChanged(async (filePath) => {
           const entry = editorManager.editors.get(tabId);
           if (entry) treeViewer.render(entry.model.getValue(), tab.title);
         }
+        // Re-render spreadsheet viewer if in spreadsheet mode
+        if (tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet' && tabId === tabManager.getActiveTabId()) {
+          const entry = editorManager.editors.get(tabId);
+          if (entry) {
+            spreadsheetViewer.render(entry.model.getValue());
+            spreadsheetViewer.onChange((csv) => {
+              entry.model.setValue(csv);
+            });
+          }
+        }
       }
     }
   } catch (err) {
@@ -1293,6 +1429,8 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'markdown-toggle': toggleMarkdownMode(); break;
     case 'table-toggle': toggleTableMode(); break;
     case 'tree-toggle': toggleTreeMode(); break;
+    case 'new-spreadsheet': newSpreadsheet(); break;
+    case 'spreadsheet-toggle': toggleSpreadsheetMode(); break;
   }
 });
 
@@ -1330,6 +1468,7 @@ window.api.onMenuCompareTabs(() => {
 window.api.onMenuGitHistory(() => showGitFileHistory());
 
 window.api.onMenuToggleNotes(() => notesPanel.toggle());
+window.api.onMenuNewSpreadsheet(() => newSpreadsheet());
 window.api.onMenuToggleTreeView(() => toggleTreeMode());
 
 // Help documents

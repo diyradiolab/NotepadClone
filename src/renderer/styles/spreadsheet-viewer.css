@@ -1,0 +1,151 @@
+/* ── Spreadsheet Viewer (Jspreadsheet CE) ── */
+
+.spreadsheet-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  position: relative;
+}
+
+/* ── Light theme overrides ── */
+
+.spreadsheet-wrapper .jexcel_container {
+  background: var(--bg-surface);
+}
+
+.spreadsheet-wrapper .jexcel {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-secondary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.spreadsheet-wrapper .jexcel td {
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.spreadsheet-wrapper .jexcel td.readonly {
+  color: var(--text-muted);
+}
+
+/* Row/column headers */
+.spreadsheet-wrapper .jexcel thead td,
+.spreadsheet-wrapper .jexcel tbody td:first-child {
+  background: var(--bg-secondary) !important;
+  color: var(--text-secondary);
+  border-color: var(--border-secondary);
+  font-weight: 600;
+}
+
+/* Selected cell */
+.spreadsheet-wrapper .jexcel td.highlight {
+  background: var(--bg-hover) !important;
+}
+
+/* Selected header */
+.spreadsheet-wrapper .jexcel thead td.selected,
+.spreadsheet-wrapper .jexcel tbody td.selected:first-child {
+  background: var(--bg-active) !important;
+}
+
+/* Context menu */
+.spreadsheet-wrapper .jexcel_contextmenu,
+.jexcel_contextmenu {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  box-shadow: 0 2px 8px var(--menu-shadow);
+  z-index: 10000;
+}
+
+.spreadsheet-wrapper .jexcel_contextmenu a,
+.jexcel_contextmenu a {
+  color: var(--text-primary);
+}
+
+.spreadsheet-wrapper .jexcel_contextmenu a:hover,
+.jexcel_contextmenu a:hover {
+  background: var(--bg-hover);
+}
+
+/* Toolbar area (jspreadsheet built-in toolbar if present) */
+.spreadsheet-wrapper .jexcel_toolbar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+/* Pagination */
+.spreadsheet-wrapper .jexcel_pagination {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-secondary);
+}
+
+/* Scrollbar styling */
+.spreadsheet-wrapper .jexcel_content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.spreadsheet-wrapper .jexcel_content::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.spreadsheet-wrapper .jexcel_content::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.spreadsheet-wrapper .jexcel_content::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Editing cell */
+.spreadsheet-wrapper .jexcel td.edition {
+  background: var(--bg-input) !important;
+  color: var(--text-primary);
+}
+
+.spreadsheet-wrapper .jexcel td.edition .editor {
+  color: var(--text-primary);
+  background: var(--bg-input);
+}
+
+/* Formula bar / editor input */
+.spreadsheet-wrapper .jexcel .editor,
+.spreadsheet-wrapper .jexcel input {
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border-color: var(--border-secondary);
+}
+
+/* Selection border */
+.spreadsheet-wrapper .jexcel .highlight-left {
+  border-left: 2px solid var(--accent-color);
+}
+.spreadsheet-wrapper .jexcel .highlight-right {
+  border-right: 2px solid var(--accent-color);
+}
+.spreadsheet-wrapper .jexcel .highlight-top {
+  border-top: 2px solid var(--accent-color);
+}
+.spreadsheet-wrapper .jexcel .highlight-bottom {
+  border-bottom: 2px solid var(--accent-color);
+}
+
+/* Corner handle for drag-fill */
+.spreadsheet-wrapper .jexcel .corner {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+/* jsuites overrides (dropdown, calendar, etc.) */
+.jdropdown-container,
+.jcalendar-container {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-secondary);
+}

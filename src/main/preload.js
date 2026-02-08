@@ -131,6 +131,9 @@ contextBridge.exposeInMainWorld('api', {
   onMenuToggleNotes: (callback) => ipcRenderer.on('main:toggle-notes', callback),
   onMenuToggleTreeView: (callback) => ipcRenderer.on('main:toggle-tree-view', callback),
 
+  // Spreadsheet
+  onMenuNewSpreadsheet: (callback) => ipcRenderer.on('main:new-spreadsheet', callback),
+
   // Help
   onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
 });

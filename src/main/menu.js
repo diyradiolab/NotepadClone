@@ -42,6 +42,10 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:new-file'),
         },
         {
+          label: 'New &Spreadsheet',
+          click: () => mainWindow.webContents.send('main:new-spreadsheet'),
+        },
+        {
           label: '&Open...',
           accelerator: 'CmdOrCtrl+O',
           click: () => mainWindow.webContents.send('main:open-file'),
