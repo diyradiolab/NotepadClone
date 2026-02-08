@@ -12,6 +12,10 @@ export class SpreadsheetViewer {
     this.worksheets = null; // v5 returns array of worksheet instances
     this._onChangeCb = null;
     this._wrapper = null;
+    this._formulaBar = null;
+    this._cellRef = null;
+    this._formulaInput = null;
+    this._selectedCell = null; // { x, y }
   }
 
   /**
@@ -21,9 +25,14 @@ export class SpreadsheetViewer {
   render(csvContent) {
     this.destroy();
 
+    this.container.innerHTML = '';
+
+    // Formula bar
+    this._formulaBar = this._createFormulaBar();
+    this.container.appendChild(this._formulaBar);
+
     const wrapper = document.createElement('div');
     wrapper.className = 'spreadsheet-wrapper';
-    this.container.innerHTML = '';
     this.container.appendChild(wrapper);
     this._wrapper = wrapper;
 
@@ -52,6 +61,7 @@ export class SpreadsheetViewer {
     // jspreadsheet needs pixel dimensions — percentage doesn't resolve
     const containerHeight = this.container.clientHeight || 600;
     const containerWidth = this.container.clientWidth || 800;
+    const formulaBarHeight = this._formulaBar ? this._formulaBar.offsetHeight || 34 : 34;
 
     // v5 API: config uses worksheets array, returns worksheet instances array
     this.worksheets = jspreadsheet(wrapper, {
@@ -63,7 +73,7 @@ export class SpreadsheetViewer {
         minSpareCols: 0,
         tableOverflow: true,
         tableWidth: `${containerWidth}px`,
-        tableHeight: `${containerHeight}px`,
+        tableHeight: `${containerHeight - formulaBarHeight}px`,
         parseFormulas: true,
         columnSorting: true,
         columnResize: true,
@@ -74,19 +84,221 @@ export class SpreadsheetViewer {
         allowDeleteColumn: true,
       }],
       contextMenu: true,
-      onafterchanges: () => this._notifyChange(),
+      onafterchanges: () => {
+        this._notifyChange();
+        this._updateFormulaInput();
+      },
       oninsertrow: () => this._notifyChange(),
       ondeleterow: () => this._notifyChange(),
       oninsertcolumn: () => this._notifyChange(),
       ondeletecolumn: () => this._notifyChange(),
       onsort: () => this._notifyChange(),
       onmoverow: () => this._notifyChange(),
+      onselection: (el, borderLeft, borderTop, borderRight, borderBottom, origin) => {
+        // borderLeft = startCol, borderTop = startRow
+        this._selectedCell = { x: borderLeft, y: borderTop };
+        this._updateFormulaBar(borderLeft, borderTop);
+      },
     });
   }
 
   /** Get the active worksheet (first one) */
   _ws() {
     return this.worksheets && this.worksheets[0] ? this.worksheets[0] : null;
+  }
+
+  /** Convert column index (0-based) to letter(s): 0→A, 25→Z, 26→AA */
+  _colName(x) {
+    let name = '';
+    let n = x;
+    while (n >= 0) {
+      name = String.fromCharCode(65 + (n % 26)) + name;
+      n = Math.floor(n / 26) - 1;
+    }
+    return name;
+  }
+
+  _createFormulaBar() {
+    const bar = document.createElement('div');
+    bar.className = 'ss-formula-bar';
+
+    // Cell reference label
+    const cellRef = document.createElement('div');
+    cellRef.className = 'ss-formula-cell-ref';
+    cellRef.textContent = 'A1';
+    this._cellRef = cellRef;
+
+    // Separator
+    const sep = document.createElement('div');
+    sep.className = 'ss-formula-sep';
+
+    // fx label
+    const fxLabel = document.createElement('span');
+    fxLabel.className = 'ss-formula-fx';
+    fxLabel.textContent = 'fx';
+
+    // Formula input
+    const input = document.createElement('input');
+    input.className = 'ss-formula-input';
+    input.type = 'text';
+    input.spellcheck = false;
+    this._formulaInput = input;
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this._applyFormulaInput();
+        // Return focus to spreadsheet
+        const ws = this._ws();
+        if (ws && ws.element) ws.element.focus();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this._updateFormulaInput(); // revert
+        const ws = this._ws();
+        if (ws && ws.element) ws.element.focus();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      this._applyFormulaInput();
+    });
+
+    // Function buttons — primary buttons + grouped dropdowns
+    const funcs = document.createElement('div');
+    funcs.className = 'ss-formula-funcs';
+
+    // Primary buttons (always visible)
+    const primaryFuncs = [
+      { label: 'SUM', formula: 'SUM(', tip: '=SUM(A1:A10)' },
+      { label: 'AVG', formula: 'AVERAGE(', tip: '=AVERAGE(A1:A10)' },
+      { label: 'IF', formula: 'IF(', tip: '=IF(A1>0,"Yes","No")' },
+    ];
+
+    for (const fn of primaryFuncs) {
+      const btn = document.createElement('button');
+      btn.className = 'ss-formula-func-btn';
+      btn.textContent = fn.label;
+      btn.title = fn.tip;
+      btn.addEventListener('click', () => this._insertFunction(fn.formula));
+      funcs.appendChild(btn);
+    }
+
+    // Grouped dropdown menus
+    const groups = [
+      { label: 'Math', items: [
+        { label: 'MIN', formula: 'MIN(', tip: '=MIN(A1:A10)' },
+        { label: 'MAX', formula: 'MAX(', tip: '=MAX(A1:A10)' },
+        { label: 'ROUND', formula: 'ROUND(', tip: '=ROUND(A1,2)' },
+        { label: 'ABS', formula: 'ABS(', tip: '=ABS(A1)' },
+        { label: 'SQRT', formula: 'SQRT(', tip: '=SQRT(A1)' },
+      ]},
+      { label: 'Stats', items: [
+        { label: 'COUNT', formula: 'COUNT(', tip: '=COUNT(A1:A10)' },
+        { label: 'COUNTA', formula: 'COUNTA(', tip: '=COUNTA(A1:A10)' },
+        { label: 'SUMIF', formula: 'SUMIF(', tip: '=SUMIF(A1:A10,">5")' },
+        { label: 'COUNTIF', formula: 'COUNTIF(', tip: '=COUNTIF(A1:A10,">0")' },
+      ]},
+      { label: 'Text', items: [
+        { label: 'CONCAT', formula: 'CONCATENATE(', tip: '=CONCATENATE(A1,B1)' },
+        { label: 'UPPER', formula: 'UPPER(', tip: '=UPPER(A1)' },
+        { label: 'LOWER', formula: 'LOWER(', tip: '=LOWER(A1)' },
+        { label: 'TRIM', formula: 'TRIM(', tip: '=TRIM(A1)' },
+        { label: 'LEN', formula: 'LEN(', tip: '=LEN(A1)' },
+      ]},
+    ];
+
+    for (const group of groups) {
+      const dropdown = document.createElement('div');
+      dropdown.className = 'ss-formula-dropdown';
+
+      const trigger = document.createElement('button');
+      trigger.className = 'ss-formula-func-btn ss-formula-dropdown-trigger';
+      trigger.textContent = group.label + ' \u25BE';
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close any other open dropdown
+        funcs.querySelectorAll('.ss-formula-dropdown-menu.open').forEach(m => {
+          if (m !== menu) m.classList.remove('open');
+        });
+        menu.classList.toggle('open');
+      });
+
+      const menu = document.createElement('div');
+      menu.className = 'ss-formula-dropdown-menu';
+
+      for (const fn of group.items) {
+        const item = document.createElement('button');
+        item.className = 'ss-formula-dropdown-item';
+        item.textContent = fn.label;
+        item.title = fn.tip;
+        item.addEventListener('click', () => {
+          this._insertFunction(fn.formula);
+          menu.classList.remove('open');
+        });
+        menu.appendChild(item);
+      }
+
+      dropdown.appendChild(trigger);
+      dropdown.appendChild(menu);
+      funcs.appendChild(dropdown);
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+      funcs.querySelectorAll('.ss-formula-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+    });
+
+    bar.appendChild(cellRef);
+    bar.appendChild(sep);
+    bar.appendChild(fxLabel);
+    bar.appendChild(input);
+    bar.appendChild(funcs);
+
+    return bar;
+  }
+
+  /** Update formula bar when a cell is selected */
+  _updateFormulaBar(x, y) {
+    if (this._cellRef) {
+      this._cellRef.textContent = `${this._colName(x)}${y + 1}`;
+    }
+    this._updateFormulaInput();
+  }
+
+  /** Sync formula input with current selected cell value */
+  _updateFormulaInput() {
+    const ws = this._ws();
+    if (!ws || !this._selectedCell || !this._formulaInput) return;
+    const { x, y } = this._selectedCell;
+    const val = ws.getValueFromCoords(x, y);
+    this._formulaInput.value = val != null ? String(val) : '';
+  }
+
+  /** Apply formula input value to the selected cell */
+  _applyFormulaInput() {
+    const ws = this._ws();
+    if (!ws || !this._selectedCell || !this._formulaInput) return;
+    const { x, y } = this._selectedCell;
+    const currentVal = ws.getValueFromCoords(x, y);
+    const newVal = this._formulaInput.value;
+    if (String(currentVal ?? '') !== newVal) {
+      ws.setValueFromCoords(x, y, newVal);
+    }
+  }
+
+  /** Insert a function template into the formula input */
+  _insertFunction(formulaPrefix) {
+    if (!this._formulaInput || !this._selectedCell) return;
+    const ws = this._ws();
+    if (!ws) return;
+
+    const { x, y } = this._selectedCell;
+    const formula = '=' + formulaPrefix + ')';
+    this._formulaInput.value = formula;
+    this._formulaInput.focus();
+    // Place cursor before the closing paren
+    const pos = formula.length - 1;
+    this._formulaInput.setSelectionRange(pos, pos);
   }
 
   _notifyChange() {
@@ -141,6 +353,10 @@ export class SpreadsheetViewer {
     this.worksheets = null;
     this._onChangeCb = null;
     this._wrapper = null;
+    this._formulaBar = null;
+    this._cellRef = null;
+    this._formulaInput = null;
+    this._selectedCell = null;
     this.container.innerHTML = '';
   }
 

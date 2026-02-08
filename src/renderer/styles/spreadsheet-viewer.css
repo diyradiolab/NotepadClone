@@ -1,8 +1,151 @@
 /* ── Spreadsheet Viewer (Jspreadsheet CE) ── */
 
+/* ── Formula Bar ── */
+
+.ss-formula-bar {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 4px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  gap: 0;
+  flex-shrink: 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.ss-formula-cell-ref {
+  min-width: 52px;
+  padding: 2px 8px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 22px;
+  user-select: none;
+}
+
+.ss-formula-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-secondary);
+  margin: 0 6px;
+}
+
+.ss-formula-fx {
+  font-family: serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-right: 6px;
+  user-select: none;
+}
+
+.ss-formula-input {
+  flex: 1;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.ss-formula-input:focus {
+  border-color: var(--accent-color);
+}
+
+.ss-formula-funcs {
+  display: flex;
+  gap: 2px;
+  margin-left: 6px;
+}
+
+.ss-formula-func-btn {
+  padding: 2px 7px;
+  height: 22px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.ss-formula-func-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+.ss-formula-func-btn:active {
+  background: var(--bg-active);
+}
+
+/* Dropdown groups */
+.ss-formula-dropdown {
+  position: relative;
+}
+
+.ss-formula-dropdown-trigger {
+  padding-right: 4px;
+}
+
+.ss-formula-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 2px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px var(--menu-shadow, rgba(0,0,0,0.15));
+  z-index: 1000;
+  min-width: 80px;
+  padding: 2px 0;
+}
+
+.ss-formula-dropdown-menu.open {
+  display: flex;
+  flex-direction: column;
+}
+
+.ss-formula-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ss-formula-dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Spreadsheet wrapper ── */
+
 .spreadsheet-wrapper {
   width: 100%;
-  height: 100%;
+  height: calc(100% - 31px);
   overflow: auto;
   position: relative;
 }
