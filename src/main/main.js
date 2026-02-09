@@ -25,14 +25,50 @@ function escapeRegex(str) {
 
 const largeFileManager = new LargeFileManager();
 
+const OPTIONS_DEFAULTS = {
+  editor: {
+    fontSize: 14,
+    fontFamily: "'Courier New', Consolas, 'Liberation Mono', monospace",
+    tabSize: 4,
+    insertSpaces: false,
+    minimap: false,
+    lineNumbers: 'on',
+    wordWrap: 'off',
+    cursorStyle: 'line',
+    renderWhitespace: 'none',
+    smoothScrolling: true,
+    cursorBlinking: 'blink',
+    folding: true,
+    renderLineHighlight: 'all',
+  },
+  appearance: {
+    theme: 'system',
+  },
+  files: {
+    defaultEncoding: 'UTF-8',
+    defaultLineEnding: 'LF',
+    autoSave: 'off',
+    autoSaveDelay: 1000,
+    largeFileThreshold: 5,
+  },
+};
+
 const store = new Store({
   defaults: {
     recentFiles: [],
     clipboardRing: [],
     windowBounds: { width: 1200, height: 800 },
     theme: 'system',
+    options: OPTIONS_DEFAULTS,
   },
 });
+
+// One-time migration: sync legacy theme into options.appearance.theme
+if (store.get('theme') && !store.has('options.appearance.theme')) {
+  store.set('options.appearance.theme', store.get('theme'));
+} else if (store.has('options.appearance.theme') && store.get('theme') !== store.get('options.appearance.theme')) {
+  store.set('theme', store.get('options.appearance.theme'));
+}
 
 let mainWindow = null;
 let currentFilePath = null; // track active file for Share menu
@@ -408,6 +444,40 @@ ipcMain.handle('renderer:set-theme', async (_event, theme) => {
   }
   buildMenu(mainWindow, store, currentFilePath);
   return { success: true };
+});
+
+// ── Options ──
+
+ipcMain.handle('renderer:get-options', async () => {
+  return store.get('options', OPTIONS_DEFAULTS);
+});
+
+ipcMain.handle('renderer:set-option', async (_event, { key, value }) => {
+  store.set(`options.${key}`, value);
+  // Keep top-level theme in sync with options.appearance.theme
+  if (key === 'appearance.theme') {
+    store.set('theme', value);
+    if (mainWindow) {
+      mainWindow.webContents.send('main:theme-changed', value);
+    }
+    buildMenu(mainWindow, store, currentFilePath);
+  }
+  return { success: true };
+});
+
+ipcMain.handle('renderer:reset-options-section', async (_event, section) => {
+  const defaults = OPTIONS_DEFAULTS[section];
+  if (!defaults) return null;
+  store.set(`options.${section}`, { ...defaults });
+  // If resetting appearance, sync theme
+  if (section === 'appearance') {
+    store.set('theme', defaults.theme);
+    if (mainWindow) {
+      mainWindow.webContents.send('main:theme-changed', defaults.theme);
+    }
+    buildMenu(mainWindow, store, currentFilePath);
+  }
+  return { ...defaults };
 });
 
 // ── Save Dialog (renderer-driven, for tab close) ──

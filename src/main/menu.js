@@ -254,6 +254,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
         },
         { type: 'separator' },
         {
+          label: 'Options...',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => mainWindow.webContents.send('main:options'),
+        },
+        {
           label: 'Plugin Manager',
           accelerator: 'CmdOrCtrl+Shift+P',
           click: () => mainWindow.webContents.send('main:plugin-manager'),

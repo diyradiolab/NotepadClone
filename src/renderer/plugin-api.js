@@ -11,6 +11,7 @@ export function createPluginAPI(pluginId, services) {
     tabManager,
     editorManager,
     statusBar,
+    settingsService,
   } = services;
 
   // Track registrations for cleanup on deactivate
@@ -18,6 +19,7 @@ export function createPluginAPI(pluginId, services) {
   const registeredViewers = [];
   const registeredToolbarButtons = [];
   const eventSubscriptions = [];
+  const settingsSubscriptions = [];
 
   return {
     pluginId,
@@ -177,6 +179,23 @@ export function createPluginAPI(pluginId, services) {
       },
     },
 
+    settings: settingsService ? {
+      get(key) { return settingsService.get(key); },
+      set(key, value) { return settingsService.set(key, value); },
+      onChange(key, callback) {
+        const unsub = settingsService.onChange(key, callback);
+        settingsSubscriptions.push(unsub);
+        return unsub;
+      },
+    } : null,
+
+    registerSettings({ category, label, settings }) {
+      if (!settingsService) return;
+      // Prefix keys with pluginId to avoid collisions
+      const prefixedCategory = `plugin.${pluginId}.${category}`;
+      settingsService.registerSettings({ pluginId, category: prefixedCategory, label, settings });
+    },
+
     // Raw services access for built-in plugins that need direct component references
     _services: services,
 
@@ -195,10 +214,14 @@ export function createPluginAPI(pluginId, services) {
       for (const unsub of eventSubscriptions) {
         unsub();
       }
+      for (const unsub of settingsSubscriptions) {
+        unsub();
+      }
       registeredCommands.length = 0;
       registeredViewers.length = 0;
       registeredToolbarButtons.length = 0;
       eventSubscriptions.length = 0;
+      settingsSubscriptions.length = 0;
     },
   };
 }

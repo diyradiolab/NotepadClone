@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-options",
+  "displayName": "Options",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["options.show"]
+    }
+  }
+}

@@ -3,7 +3,8 @@ import './styles/notepadpp-theme.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
-import { setEditorTheme } from './editor/monaco-setup';
+import { setEditorTheme, updateDefaultOptions } from './editor/monaco-setup';
+import { SettingsService } from './settings-service';
 import { EventBus } from './event-bus';
 import { CommandRegistry } from './command-registry';
 import { ViewerRegistry } from './viewer-registry';
@@ -45,6 +46,8 @@ import * as gitPlugin from '../../plugins/git/index';
 import gitManifest from '../../plugins/git/package.json';
 import * as pluginManagerPlugin from '../../plugins/plugin-manager/index';
 import pluginManagerManifest from '../../plugins/plugin-manager/package.json';
+import * as optionsPlugin from '../../plugins/options/index';
+import optionsManifest from '../../plugins/options/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -64,6 +67,7 @@ const eventBus = new EventBus();
 const commandRegistry = new CommandRegistry();
 const viewerRegistry = new ViewerRegistry();
 const toolbarManager = new ToolbarManager(document.getElementById('toolbar'));
+const settingsService = new SettingsService();
 const pluginHost = new PluginHost({
   eventBus,
   commandRegistry,
@@ -72,6 +76,7 @@ const pluginHost = new PluginHost({
   tabManager,
   editorManager,
   statusBar,
+  settingsService,
 });
 pluginHost.services.pluginHost = pluginHost;
 
@@ -92,12 +97,55 @@ pluginHost.register(recentFilesManifest, recentFilesPlugin);
 pluginHost.register(compareTabsManifest, compareTabsPlugin);
 pluginHost.register(gitManifest, gitPlugin);
 pluginHost.register(pluginManagerManifest, pluginManagerPlugin);
+pluginHost.register(optionsManifest, optionsPlugin);
 
-// Activate plugins, skipping user-disabled ones (but always activate plugin-manager)
+// ── Apply Editor Settings from SettingsService to Monaco ──
+function applyEditorSettings() {
+  const monacoOpts = {
+    fontSize: settingsService.get('editor.fontSize'),
+    fontFamily: settingsService.get('editor.fontFamily'),
+    tabSize: settingsService.get('editor.tabSize'),
+    insertSpaces: settingsService.get('editor.insertSpaces'),
+    minimap: { enabled: settingsService.get('editor.minimap') },
+    lineNumbers: settingsService.get('editor.lineNumbers'),
+    wordWrap: settingsService.get('editor.wordWrap'),
+    cursorStyle: settingsService.get('editor.cursorStyle'),
+    renderWhitespace: settingsService.get('editor.renderWhitespace'),
+    smoothScrolling: settingsService.get('editor.smoothScrolling'),
+    cursorBlinking: settingsService.get('editor.cursorBlinking'),
+    folding: settingsService.get('editor.folding'),
+    renderLineHighlight: settingsService.get('editor.renderLineHighlight'),
+  };
+  // Update defaults for future editors
+  updateDefaultOptions(monacoOpts);
+  // Update active editor if one exists
+  const editor = editorManager.getActiveEditor();
+  if (editor) editor.updateOptions(monacoOpts);
+}
+
+// ── Async Init: load settings, apply, then activate plugins ──
 (async () => {
+  await settingsService.init();
+  applyEditorSettings();
+  applyTheme(settingsService.get('appearance.theme'));
+
+  // Wire onChange listeners for editor settings
+  const editorKeys = [
+    'editor.fontSize', 'editor.fontFamily', 'editor.tabSize', 'editor.insertSpaces',
+    'editor.minimap', 'editor.lineNumbers', 'editor.wordWrap', 'editor.cursorStyle',
+    'editor.renderWhitespace', 'editor.smoothScrolling', 'editor.cursorBlinking',
+    'editor.folding', 'editor.renderLineHighlight',
+  ];
+  for (const key of editorKeys) {
+    settingsService.onChange(key, () => applyEditorSettings());
+  }
+  settingsService.onChange('appearance.theme', (value) => applyTheme(value));
+
+  // Activate plugins, skipping user-disabled (always activate plugin-manager + options)
+  const alwaysActivate = new Set(['notepadclone-plugin-manager', 'notepadclone-options']);
   const disabledPlugins = JSON.parse(localStorage.getItem('notepadclone-disabled-plugins') || '[]');
   for (const id of pluginHost.getPluginIds()) {
-    if (id !== 'notepadclone-plugin-manager' && disabledPlugins.includes(id)) continue;
+    if (!alwaysActivate.has(id) && disabledPlugins.includes(id)) continue;
     await pluginHost.activatePlugin(id);
   }
 })();
@@ -144,15 +192,10 @@ function applyTheme(preference) {
   setEditorTheme(resolved === 'dark' ? 'notepadpp-dark' : 'notepadpp');
 }
 
-(async function initTheme() {
-  const theme = await window.api.getTheme();
-  applyTheme(theme);
-})();
-
 window.api.onThemeChanged((theme) => applyTheme(theme));
 
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
-  const theme = await window.api.getTheme();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  const theme = settingsService.get('appearance.theme');
   if (theme === 'system') applyTheme('system');
 });
 
@@ -797,6 +840,7 @@ window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
 window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));
+window.api.onMenuOptions(() => commandRegistry.execute('options.show'));
 
 // Help documents
 window.api.onMenuHelpPluginDev(() => eventBus.emit('help:open', { title: 'Plugin Development Guide.md', content: PLUGIN_DEVELOPMENT_GUIDE }));

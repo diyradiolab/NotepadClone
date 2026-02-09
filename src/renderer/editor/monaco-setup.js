@@ -101,6 +101,16 @@ const DEFAULT_OPTIONS = {
   parameterHints: { enabled: false },
 };
 
+export function updateDefaultOptions(newOptions) {
+  for (const [key, value] of Object.entries(newOptions)) {
+    if (key === 'minimap' && typeof value === 'object') {
+      DEFAULT_OPTIONS.minimap = { ...DEFAULT_OPTIONS.minimap, ...value };
+    } else {
+      DEFAULT_OPTIONS[key] = value;
+    }
+  }
+}
+
 export function createEditor(container, options = {}) {
   const editorOptions = { ...DEFAULT_OPTIONS, theme: currentTheme, ...options };
 

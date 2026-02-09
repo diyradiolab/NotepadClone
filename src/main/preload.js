@@ -143,6 +143,12 @@ contextBridge.exposeInMainWorld('api', {
   // Plugin Manager
   onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
 
+  // Options
+  getOptions: () => ipcRenderer.invoke('renderer:get-options'),
+  setOption: (key, value) => ipcRenderer.invoke('renderer:set-option', { key, value }),
+  resetOptionsSection: (section) => ipcRenderer.invoke('renderer:reset-options-section', section),
+  onMenuOptions: (callback) => ipcRenderer.on('main:options', callback),
+
   // Help
   onMenuHelpPluginDev: (callback) => ipcRenderer.on('main:help-plugin-dev', callback),
   onMenuHelpPluginUser: (callback) => ipcRenderer.on('main:help-plugin-user', callback),
