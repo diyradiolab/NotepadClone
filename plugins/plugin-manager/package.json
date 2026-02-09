@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-plugin-manager",
+  "displayName": "Plugin Manager",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["pluginManager.show"]
+    }
+  }
+}

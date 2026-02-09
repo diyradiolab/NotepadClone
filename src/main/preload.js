@@ -140,6 +140,11 @@ contextBridge.exposeInMainWorld('api', {
   exportSvgFile: (svgContent, defaultPath) =>
     ipcRenderer.invoke('renderer:export-svg-file', { svgContent, defaultPath }),
 
+  // Plugin Manager
+  onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
+
   // Help
+  onMenuHelpPluginDev: (callback) => ipcRenderer.on('main:help-plugin-dev', callback),
+  onMenuHelpPluginUser: (callback) => ipcRenderer.on('main:help-plugin-user', callback),
   onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
 });

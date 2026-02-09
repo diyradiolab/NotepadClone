@@ -43,6 +43,12 @@ import * as compareTabsPlugin from '../../plugins/compare-tabs/index';
 import compareTabsManifest from '../../plugins/compare-tabs/package.json';
 import * as gitPlugin from '../../plugins/git/index';
 import gitManifest from '../../plugins/git/package.json';
+import * as pluginManagerPlugin from '../../plugins/plugin-manager/index';
+import pluginManagerManifest from '../../plugins/plugin-manager/package.json';
+
+// Help documents
+import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
+import { PLUGIN_USER_GUIDE } from './help/plugin-user-guide';
 
 // ── Initialize Core Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -67,6 +73,7 @@ const pluginHost = new PluginHost({
   editorManager,
   statusBar,
 });
+pluginHost.services.pluginHost = pluginHost;
 
 // Register and activate all built-in plugins
 pluginHost.register(coreEditingManifest, coreEditingPlugin);
@@ -84,7 +91,16 @@ pluginHost.register(clipboardHistoryManifest, clipboardHistoryPlugin);
 pluginHost.register(recentFilesManifest, recentFilesPlugin);
 pluginHost.register(compareTabsManifest, compareTabsPlugin);
 pluginHost.register(gitManifest, gitPlugin);
-pluginHost.activateAll();
+pluginHost.register(pluginManagerManifest, pluginManagerPlugin);
+
+// Activate plugins, skipping user-disabled ones (but always activate plugin-manager)
+(async () => {
+  const disabledPlugins = JSON.parse(localStorage.getItem('notepadclone-disabled-plugins') || '[]');
+  for (const id of pluginHost.getPluginIds()) {
+    if (id !== 'notepadclone-plugin-manager' && disabledPlugins.includes(id)) continue;
+    await pluginHost.activatePlugin(id);
+  }
+})();
 
 let newFileCounter = 1;
 let currentFolderPath = null;
@@ -144,7 +160,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', asy
 document.getElementById('markdown-format-toolbar').addEventListener('click', (e) => {
   const btn = e.target.closest('.mft-btn');
   if (!btn) return;
-  commandRegistry.execute('notepadclone-core-editing.core-editing.markdownFormat', btn.dataset.mdAction);
+  commandRegistry.execute('core-editing.markdownFormat', btn.dataset.mdAction);
 });
 
 // ── Tab ↔ Editor Wiring (using ViewerRegistry) ──
@@ -277,7 +293,7 @@ editorManager.onClipboardCopy((text, tabId) => {
 });
 
 editorManager.onShowClipboardHistory(() => {
-  commandRegistry.execute('notepadclone-clipboard-history.clipboardHistory.show');
+  commandRegistry.execute('clipboardHistory.show');
 });
 
 // ── Open a large file (delegates to plugin) ──
@@ -499,7 +515,7 @@ async function openFile() {
 }
 
 async function openFolder() {
-  commandRegistry.execute('notepadclone-file-explorer.fileExplorer.openFolder');
+  commandRegistry.execute('fileExplorer.openFolder');
 }
 
 async function saveFile() {
@@ -720,12 +736,12 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'save': saveFile(); break;
     case 'undo': editorManager.undo(); break;
     case 'redo': editorManager.redo(); break;
-    case 'find': commandRegistry.execute('notepadclone-find-replace.findReplace.find'); break;
+    case 'find': commandRegistry.execute('findReplace.find'); break;
     case 'replace': editorManager.replace(); break;
-    case 'find-in-files': commandRegistry.execute('notepadclone-find-replace.findReplace.findInFiles'); break;
+    case 'find-in-files': commandRegistry.execute('findReplace.findInFiles'); break;
     case 'word-wrap': editorManager.toggleWordWrap(); break;
     case 'column-select': toggleColumnSelection(); break;
-    case 'sql-query': commandRegistry.execute('notepadclone-sql-query.sqlQuery.toggle'); break;
+    case 'sql-query': commandRegistry.execute('sqlQuery.toggle'); break;
     case 'git-init': commandRegistry.execute('git.init'); break;
     case 'git-stage': commandRegistry.execute('git.stageAll'); break;
     case 'git-stage-file': commandRegistry.execute('git.stageFile'); break;
@@ -733,15 +749,15 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-push': commandRegistry.execute('git.push'); break;
     case 'git-pull': commandRegistry.execute('git.pull'); break;
     case 'git-history': commandRegistry.execute('git.fileHistory'); break;
-    case 'notes-toggle': commandRegistry.execute('notepadclone-notes.notes.toggle'); break;
-    case 'markdown-toggle': commandRegistry.execute('notepadclone-markdown.markdown.toggleMode'); break;
-    case 'table-toggle': commandRegistry.execute('notepadclone-table-viewer.table.toggleMode'); break;
-    case 'tree-toggle': commandRegistry.execute('notepadclone-tree-viewer.tree.toggleMode'); break;
-    case 'new-spreadsheet': commandRegistry.execute('notepadclone-spreadsheet.spreadsheet.new'); break;
-    case 'spreadsheet-toggle': commandRegistry.execute('notepadclone-spreadsheet.spreadsheet.toggleMode'); break;
-    case 'new-diagram': commandRegistry.execute('notepadclone-diagram.diagram.new'); break;
-    case 'diagram-toggle': commandRegistry.execute('notepadclone-diagram.diagram.toggleSplit'); break;
-    case 'diagram-export': commandRegistry.execute('notepadclone-diagram.diagram.exportSvg'); break;
+    case 'notes-toggle': commandRegistry.execute('notes.toggle'); break;
+    case 'markdown-toggle': commandRegistry.execute('markdown.toggleMode'); break;
+    case 'table-toggle': commandRegistry.execute('table.toggleMode'); break;
+    case 'tree-toggle': commandRegistry.execute('tree.toggleMode'); break;
+    case 'new-spreadsheet': commandRegistry.execute('spreadsheet.new'); break;
+    case 'spreadsheet-toggle': commandRegistry.execute('spreadsheet.toggleMode'); break;
+    case 'new-diagram': commandRegistry.execute('diagram.new'); break;
+    case 'diagram-toggle': commandRegistry.execute('diagram.toggleSplit'); break;
+    case 'diagram-export': commandRegistry.execute('diagram.exportSvg'); break;
   }
 });
 
@@ -758,35 +774,38 @@ window.api.onMenuCloseTab(() => {
 });
 window.api.onMenuUndo(() => editorManager.undo());
 window.api.onMenuRedo(() => editorManager.redo());
-window.api.onMenuFind(() => commandRegistry.execute('notepadclone-find-replace.findReplace.find'));
+window.api.onMenuFind(() => commandRegistry.execute('findReplace.find'));
 window.api.onMenuReplace(() => editorManager.replace());
-window.api.onMenuFindInFiles(() => commandRegistry.execute('notepadclone-find-replace.findReplace.findInFiles'));
+window.api.onMenuFindInFiles(() => commandRegistry.execute('findReplace.findInFiles'));
 window.api.onMenuToggleWordWrap(() => editorManager.toggleWordWrap());
 window.api.onMenuToggleShowAllChars(() => editorManager.toggleShowAllCharacters());
-window.api.onMenuToggleExplorer(() => commandRegistry.execute('notepadclone-file-explorer.fileExplorer.toggle'));
+window.api.onMenuToggleExplorer(() => commandRegistry.execute('fileExplorer.toggle'));
 window.api.onMenuToggleColumnSelection(() => toggleColumnSelection());
 window.api.onMenuZoomIn(() => editorManager.zoomIn());
 window.api.onMenuZoomOut(() => editorManager.zoomOut());
 window.api.onMenuResetZoom(() => editorManager.resetZoom());
 window.api.onMenuOpenRecent((filePath) => openFileByPath(filePath));
 window.api.onMenuGoToLine(() => showGoToLineDialog());
-window.api.onMenuShowRecentFiles(() => commandRegistry.execute('notepadclone-recent-files.recentFiles.show'));
-window.api.onMenuClipboardHistory(() => commandRegistry.execute('notepadclone-clipboard-history.clipboardHistory.show'));
-window.api.onMenuSqlQuery(() => commandRegistry.execute('notepadclone-sql-query.sqlQuery.toggle'));
-window.api.onMenuCompareTabs(() => commandRegistry.execute('notepadclone-compare-tabs.compareTabs.show'));
+window.api.onMenuShowRecentFiles(() => commandRegistry.execute('recentFiles.show'));
+window.api.onMenuClipboardHistory(() => commandRegistry.execute('clipboardHistory.show'));
+window.api.onMenuSqlQuery(() => commandRegistry.execute('sqlQuery.toggle'));
+window.api.onMenuCompareTabs(() => commandRegistry.execute('compareTabs.show'));
 window.api.onMenuGitHistory(() => commandRegistry.execute('git.fileHistory'));
-window.api.onMenuToggleNotes(() => commandRegistry.execute('notepadclone-notes.notes.toggle'));
-window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('notepadclone-spreadsheet.spreadsheet.new'));
-window.api.onMenuNewDiagram(() => commandRegistry.execute('notepadclone-diagram.diagram.new'));
-window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('notepadclone-diagram.diagram.exportSvg'));
-window.api.onMenuToggleTreeView(() => commandRegistry.execute('notepadclone-tree-viewer.tree.toggleMode'));
+window.api.onMenuToggleNotes(() => commandRegistry.execute('notes.toggle'));
+window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('spreadsheet.new'));
+window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
+window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
+window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
+window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));
 
 // Help documents
-window.api.onMenuHelpSqlQuery(() => commandRegistry.execute('notepadclone-sql-query.sqlQuery.help'));
+window.api.onMenuHelpPluginDev(() => eventBus.emit('help:open', { title: 'Plugin Development Guide.md', content: PLUGIN_DEVELOPMENT_GUIDE }));
+window.api.onMenuHelpPluginUser(() => eventBus.emit('help:open', { title: 'Using Plugins.md', content: PLUGIN_USER_GUIDE }));
+window.api.onMenuHelpSqlQuery(() => commandRegistry.execute('sqlQuery.help'));
 
 // Text transforms (via core-editing plugin)
 window.api.onTextTransform((type) => {
-  commandRegistry.execute('notepadclone-core-editing.core-editing.textTransform', type);
+  commandRegistry.execute('core-editing.textTransform', type);
 });
 
 // Let command registry handle all plugin-registered shortcuts

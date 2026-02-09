@@ -254,6 +254,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
         },
         { type: 'separator' },
         {
+          label: 'Plugin Manager',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => mainWindow.webContents.send('main:plugin-manager'),
+        },
+        { type: 'separator' },
+        {
           label: 'Theme',
           submenu: [
             {
@@ -314,6 +320,14 @@ function buildMenu(mainWindow, store, currentFilePath) {
     {
       label: '&Help',
       submenu: [
+        {
+          label: 'Plugin Development Guide',
+          click: () => mainWindow.webContents.send('main:help-plugin-dev'),
+        },
+        {
+          label: 'Using Plugins',
+          click: () => mainWindow.webContents.send('main:help-plugin-user'),
+        },
         {
           label: 'SQL Query Builder Guide',
           click: () => mainWindow.webContents.send('main:help-sql-query'),
