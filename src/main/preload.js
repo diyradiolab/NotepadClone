@@ -185,4 +185,5 @@ contextBridge.exposeInMainWorld('api', {
   onMenuHelpPluginDev: (callback) => ipcRenderer.on('main:help-plugin-dev', callback),
   onMenuHelpPluginUser: (callback) => ipcRenderer.on('main:help-plugin-user', callback),
   onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
+  onMenuHelpMigration: (callback) => ipcRenderer.on('main:help-migration', callback),
 });

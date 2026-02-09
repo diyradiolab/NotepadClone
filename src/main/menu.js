@@ -357,6 +357,10 @@ function buildMenu(mainWindow, store, currentFilePath) {
           label: 'SQL Query Builder Guide',
           click: () => mainWindow.webContents.send('main:help-sql-query'),
         },
+        {
+          label: 'Moving to a New Computer',
+          click: () => mainWindow.webContents.send('main:help-migration'),
+        },
         { type: 'separator' },
         {
           label: 'About NotepadClone',

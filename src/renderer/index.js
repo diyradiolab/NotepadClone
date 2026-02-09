@@ -60,6 +60,7 @@ import captainsLogManifest from '../../plugins/captains-log/package.json';
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
 import { PLUGIN_USER_GUIDE } from './help/plugin-user-guide';
+import { MIGRATION_GUIDE } from './help/migration-guide';
 
 // ── Initialize Core Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -879,6 +880,7 @@ window.api.onMenuOptions(() => commandRegistry.execute('options.show'));
 window.api.onMenuHelpPluginDev(() => eventBus.emit('help:open', { title: 'Plugin Development Guide.md', content: PLUGIN_DEVELOPMENT_GUIDE }));
 window.api.onMenuHelpPluginUser(() => eventBus.emit('help:open', { title: 'Using Plugins.md', content: PLUGIN_USER_GUIDE }));
 window.api.onMenuHelpSqlQuery(() => commandRegistry.execute('sqlQuery.help'));
+window.api.onMenuHelpMigration(() => eventBus.emit('help:open', { title: 'Moving to a New Computer.md', content: MIGRATION_GUIDE }));
 
 // Text transforms (via core-editing plugin)
 window.api.onTextTransform((type) => {
