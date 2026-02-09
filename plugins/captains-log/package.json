@@ -1,0 +1,15 @@
+{
+  "name": "notepadclone-captains-log",
+  "displayName": "Captain's Log",
+  "description": "Daily journal side panel with stardate formatting",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "captainsLog.toggle",
+        "title": "Toggle Captain's Log"
+      }
+    ]
+  }
+}

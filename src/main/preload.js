@@ -140,6 +140,11 @@ contextBridge.exposeInMainWorld('api', {
   exportSvgFile: (svgContent, defaultPath) =>
     ipcRenderer.invoke('renderer:export-svg-file', { svgContent, defaultPath }),
 
+  // Captain's Log
+  getCaptainsLog: () => ipcRenderer.invoke('renderer:get-captains-log'),
+  saveCaptainsLog: (data) => ipcRenderer.invoke('renderer:save-captains-log', data),
+  onMenuToggleCaptainsLog: (callback) => ipcRenderer.on('main:toggle-captains-log', callback),
+
   // Snippets
   getSnippets: () => ipcRenderer.invoke('renderer:get-snippets'),
   saveSnippets: (snippets) => ipcRenderer.invoke('renderer:save-snippets', snippets),

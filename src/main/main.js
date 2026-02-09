@@ -772,6 +772,16 @@ ipcMain.handle('renderer:import-notes', async () => {
   return JSON.parse(raw);
 });
 
+// ── Captain's Log ──
+
+ipcMain.handle('renderer:get-captains-log', async () => {
+  return store.get('captainsLog', { entries: {}, panelWidth: 280, visible: false });
+});
+
+ipcMain.handle('renderer:save-captains-log', async (_event, data) => {
+  store.set('captainsLog', data);
+});
+
 // ── Snippets ──
 
 ipcMain.handle('renderer:get-snippets', async () => {

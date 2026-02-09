@@ -1,0 +1,162 @@
+/* ── Captain's Log Panel (Right Side) ── */
+.captains-log-panel {
+  width: 280px;
+  min-width: 200px;
+  max-width: 500px;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.captains-log-panel.hidden {
+  display: none;
+}
+
+/* ── Header ── */
+.cl-header-title {
+  flex: 1;
+  letter-spacing: 0.5px;
+}
+
+/* ── Search ── */
+.cl-search {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.cl-search-input {
+  width: 100%;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.cl-search-input:focus {
+  border-color: var(--input-border-focus);
+}
+
+.cl-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Date List ── */
+.cl-list {
+  flex: 0 0 auto;
+  max-height: 40%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.cl-list-item {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 10px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.cl-list-item:last-child {
+  border-bottom: none;
+}
+
+.cl-list-item:hover {
+  background: var(--bg-secondary);
+}
+
+.cl-list-item.active {
+  background: var(--bg-toolbar-hover);
+}
+
+.cl-list-item.today .cl-item-primary {
+  color: var(--text-accent);
+}
+
+.cl-item-primary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-today-label {
+  color: var(--text-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cl-item-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ── Entry Header (above textarea) ── */
+.cl-entry-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+  min-height: 24px;
+}
+
+/* ── Text Area ── */
+.cl-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 8px;
+  font-family: "Courier New", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.cl-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Empty State ── */
+.cl-empty {
+  padding: 16px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* ── Resize Handle (left edge) ── */
+.cl-resize {
+  width: 4px;
+  cursor: col-resize;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+.cl-resize:hover {
+  background: var(--text-accent);
+}

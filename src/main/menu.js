@@ -254,6 +254,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:toggle-notes'),
         },
         {
+          label: "Captain's Log",
+          accelerator: 'CmdOrCtrl+Shift+L',
+          click: () => mainWindow.webContents.send('main:toggle-captains-log'),
+        },
+        {
           label: 'Toggle Tree View',
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => mainWindow.webContents.send('main:toggle-tree-view'),

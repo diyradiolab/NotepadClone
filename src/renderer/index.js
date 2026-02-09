@@ -54,6 +54,8 @@ import * as terminalPlugin from '../../plugins/terminal/index';
 import terminalManifest from '../../plugins/terminal/package.json';
 import * as commandPalettePlugin from '../../plugins/command-palette/index';
 import commandPaletteManifest from '../../plugins/command-palette/package.json';
+import * as captainsLogPlugin from '../../plugins/captains-log/index';
+import captainsLogManifest from '../../plugins/captains-log/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -107,6 +109,7 @@ pluginHost.register(optionsManifest, optionsPlugin);
 pluginHost.register(snippetsManifest, snippetsPlugin);
 pluginHost.register(terminalManifest, terminalPlugin);
 pluginHost.register(commandPaletteManifest, commandPalettePlugin);
+pluginHost.register(captainsLogManifest, captainsLogPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -802,7 +805,12 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'git-push': commandRegistry.execute('git.push'); break;
     case 'git-pull': commandRegistry.execute('git.pull'); break;
     case 'git-history': commandRegistry.execute('git.fileHistory'); break;
-    case 'notes-toggle': commandRegistry.execute('notes.toggle'); break;
+    case 'notes-toggle': {
+      const _clExp = _getPluginExports('notepadclone-captains-log');
+      if (_clExp) { const _clP = _clExp.getPanel(); if (_clP.isVisible()) { _clP.flushSave(); _clP.hide(); } }
+      commandRegistry.execute('notes.toggle');
+      break;
+    }
     case 'markdown-toggle': commandRegistry.execute('markdown.toggleMode'); break;
     case 'table-toggle': commandRegistry.execute('table.toggleMode'); break;
     case 'tree-toggle': commandRegistry.execute('tree.toggleMode'); break;
@@ -846,7 +854,19 @@ window.api.onMenuSnippets(() => commandRegistry.execute('snippets.show'));
 window.api.onMenuToggleTerminal(() => commandRegistry.execute('terminal.toggle'));
 window.api.onMenuCompareTabs(() => commandRegistry.execute('compareTabs.show'));
 window.api.onMenuGitHistory(() => commandRegistry.execute('git.fileHistory'));
-window.api.onMenuToggleNotes(() => commandRegistry.execute('notes.toggle'));
+window.api.onMenuToggleNotes(() => {
+  // If Captain's Log is visible, hide it first
+  const clExports = _getPluginExports('notepadclone-captains-log');
+  if (clExports) {
+    const clPanel = clExports.getPanel();
+    if (clPanel.isVisible()) {
+      clPanel.flushSave();
+      clPanel.hide();
+    }
+  }
+  commandRegistry.execute('notes.toggle');
+});
+window.api.onMenuToggleCaptainsLog(() => commandRegistry.execute('captainsLog.toggle'));
 window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('spreadsheet.new'));
 window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
