@@ -134,6 +134,12 @@ contextBridge.exposeInMainWorld('api', {
   // Spreadsheet
   onMenuNewSpreadsheet: (callback) => ipcRenderer.on('main:new-spreadsheet', callback),
 
+  // Diagram
+  onMenuNewDiagram: (callback) => ipcRenderer.on('main:new-diagram', callback),
+  onMenuExportDiagramSvg: (callback) => ipcRenderer.on('main:export-diagram-svg', callback),
+  exportSvgFile: (svgContent, defaultPath) =>
+    ipcRenderer.invoke('renderer:export-svg-file', { svgContent, defaultPath }),
+
   // Help
   onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
 });

@@ -122,6 +122,7 @@
     "electron-store": "^8.2.0",
     "jspreadsheet-ce": "^5.0.4",
     "markdown-it": "^14.1.0",
+    "mermaid": "^11.12.2",
     "monaco-editor": "^0.45.0"
   }
 }

@@ -676,6 +676,18 @@ ipcMain.handle('renderer:export-notes', async (_event, notes) => {
   return { success: true, filePath: result.filePath };
 });
 
+// ── Diagram SVG Export ──
+
+ipcMain.handle('renderer:export-svg-file', async (_event, { svgContent, defaultPath }) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: defaultPath || 'diagram.svg',
+    filters: [{ name: 'SVG Files', extensions: ['svg'] }],
+  });
+  if (result.canceled) return { success: false };
+  await fs.promises.writeFile(result.filePath, svgContent, 'utf-8');
+  return { success: true, filePath: result.filePath };
+});
+
 ipcMain.handle('renderer:import-notes', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],

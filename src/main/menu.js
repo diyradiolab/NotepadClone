@@ -46,6 +46,10 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:new-spreadsheet'),
         },
         {
+          label: 'New &Diagram',
+          click: () => mainWindow.webContents.send('main:new-diagram'),
+        },
+        {
           label: '&Open...',
           accelerator: 'CmdOrCtrl+O',
           click: () => mainWindow.webContents.send('main:open-file'),
@@ -69,6 +73,10 @@ function buildMenu(mainWindow, store, currentFilePath) {
           label: 'Save &As...',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => mainWindow.webContents.send('main:save-as'),
+        },
+        {
+          label: 'Export Diagram as SVG...',
+          click: () => mainWindow.webContents.send('main:export-diagram-svg'),
         },
         { type: 'separator' },
         ...(isMac && currentFilePath ? [{

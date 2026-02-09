@@ -1,0 +1,143 @@
+/* ── Diagram Viewer (Mermaid) ── */
+
+.dv-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* Template toolbar */
+.dv-template-bar {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-secondary);
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dv-template-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  user-select: none;
+  font-family: "Segoe UI", -apple-system, sans-serif;
+}
+
+.dv-template-btn {
+  padding: 2px 8px;
+  height: 22px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: "Segoe UI", -apple-system, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dv-template-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+/* Split container */
+.dv-split-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.dv-left-pane {
+  position: relative;
+  overflow: hidden;
+}
+
+.dv-right-pane {
+  position: relative;
+  overflow: auto;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-secondary);
+}
+
+/* Resize handle */
+.dv-resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: var(--border-secondary);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.dv-resize-handle:hover,
+.dv-resize-active {
+  background: var(--accent-color);
+}
+
+/* SVG container */
+.dv-svg-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  min-height: 100%;
+}
+
+.dv-svg-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Error display */
+.dv-error {
+  padding: 16px 24px;
+  margin: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  color: #d32f2f;
+  font-family: "Consolas", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-theme="dark"] .dv-error {
+  border-color: #ef5350;
+  color: #ef5350;
+}
+
+/* Placeholder */
+.dv-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Scrollbar styling for preview pane */
+.dv-right-pane::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.dv-right-pane::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.dv-right-pane::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.dv-right-pane::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}

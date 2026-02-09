@@ -13,6 +13,9 @@
       <button class="toolbar-btn" data-action="new" title="New (Ctrl+N)">
         <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5H3.5a1 1 0 00-1 1v11a1 1 0 001 1h9a1 1 0 001-1V6L9 1.5z"/><polyline points="9,1.5 9,6 13.5,6"/></svg></span>
       </button>
+      <button class="toolbar-btn" data-action="new-diagram" title="New Diagram">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="4" height="3" rx="0.5"/><rect x="10.5" y="5.5" width="4" height="3" rx="0.5"/><rect x="1.5" y="11.5" width="4" height="3" rx="0.5"/><line x1="5.5" y1="3" x2="10.5" y2="7"/><line x1="5.5" y1="13" x2="10.5" y2="7"/></svg></span>
+      </button>
       <button class="toolbar-btn" data-action="new-spreadsheet" title="New Spreadsheet">
         <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><line x1="1.5" y1="5.5" x2="14.5" y2="5.5"/><line x1="1.5" y1="9" x2="14.5" y2="9"/><line x1="5.5" y1="5.5" x2="5.5" y2="14"/><line x1="10.5" y1="5.5" x2="10.5" y2="14"/><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="10.5" y1="3.75" x2="13.5" y2="3.75"/></svg></span>
       </button>
@@ -91,6 +94,13 @@
       <span class="toolbar-separator" id="tree-separator" style="display:none"></span>
       <button class="toolbar-btn" data-action="tree-toggle" id="btn-tree-toggle" title="Toggle Tree View (Ctrl+Shift+R)" style="display:none">
         <span class="toolbar-icon" id="tree-toggle-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="10" r="1.5"/><circle cx="13" cy="13" r="1.5"/><line x1="4.2" y1="3.7" x2="7.8" y2="5.5"/><line x1="4.2" y1="3.7" x2="7.8" y2="9.5"/><line x1="10.2" y1="10.7" x2="11.8" y2="12.5"/></svg></span>
+      </button>
+      <span class="toolbar-separator" id="dv-separator" style="display:none"></span>
+      <button class="toolbar-btn" data-action="diagram-toggle" id="btn-diagram-toggle" title="Toggle Split/Full Editor View" style="display:none">
+        <span class="toolbar-icon" id="dv-toggle-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><line x1="8" y1="2" x2="8" y2="14"/></svg></span>
+      </button>
+      <button class="toolbar-btn" data-action="diagram-export" id="btn-diagram-export" title="Export Diagram as SVG" style="display:none">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v3h10v-3"/><line x1="8" y1="2" x2="8" y2="10"/><polyline points="5,7 8,10 11,7"/></svg></span>
       </button>
     </div>
 

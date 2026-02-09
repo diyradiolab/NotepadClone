@@ -14,6 +14,7 @@ import './styles/table-viewer.css';
 import './styles/notes-panel.css';
 import './styles/tree-viewer.css';
 import './styles/spreadsheet-viewer.css';
+import './styles/diagram-viewer.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -33,6 +34,7 @@ import { TableViewer, isTableFile, isTableJSON, isTableXML } from './components/
 import { TreeViewer } from './components/tree-viewer';
 import { NotesPanel } from './components/notes-panel';
 import { SpreadsheetViewer } from './components/spreadsheet-viewer';
+import { DiagramViewer, isDiagramFile } from './components/diagram-viewer';
 import { formatMarkdown } from './editor/markdown-format';
 import { SQL_QUERY_HELP } from './help/sql-query-help';
 
@@ -60,6 +62,8 @@ const tableViewer = new TableViewer(editorContainer);
 const treeViewer = new TreeViewer(editorContainer);
 const notesPanel = new NotesPanel(document.getElementById('notes-panel'));
 const spreadsheetViewer = new SpreadsheetViewer(editorContainer);
+const diagramViewer = new DiagramViewer(editorContainer);
+let diagramCounter = 1;
 
 recentFilesDialog.onFileOpen((filePath) => openFileByPath(filePath));
 
@@ -657,13 +661,78 @@ function newSpreadsheet() {
   tabManager.activate(tabId);
 }
 
+// ── Diagram Viewer ──
+
+const dvToggleBtn = document.getElementById('btn-diagram-toggle');
+const dvExportBtn = document.getElementById('btn-diagram-export');
+const dvSeparator = document.getElementById('dv-separator');
+const dvToggleIcon = document.getElementById('dv-toggle-icon');
+
+const DV_ICON_SPLIT = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><line x1="8" y1="2" x2="8" y2="14"/></svg>';
+const DV_ICON_FULL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/></svg>';
+
+function updateDiagramToolbar(isDiagram, isSplit) {
+  if (!isDiagram) {
+    dvToggleBtn.style.display = 'none';
+    dvExportBtn.style.display = 'none';
+    dvSeparator.style.display = 'none';
+    return;
+  }
+  dvToggleBtn.style.display = '';
+  dvExportBtn.style.display = '';
+  dvSeparator.style.display = '';
+  dvToggleIcon.innerHTML = isSplit ? DV_ICON_FULL : DV_ICON_SPLIT;
+  dvToggleBtn.title = isSplit ? 'Switch to Full Editor' : 'Switch to Split View';
+}
+
+function toggleDiagramSplit() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isDiagram) return;
+  const isSplit = diagramViewer.toggleSplitView();
+  updateDiagramToolbar(true, isSplit);
+}
+
+async function exportDiagramSvg() {
+  const tabId = tabManager.getActiveTabId();
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.isDiagram) return;
+
+  const svg = diagramViewer.getSvg();
+  if (!svg) {
+    statusBar.showMessage('No valid diagram to export');
+    return;
+  }
+
+  const defaultName = (tab.title || 'diagram').replace(/\.(mmd|mermaid)$/i, '') + '.svg';
+  const result = await window.api.exportSvgFile(svg, defaultName);
+  if (result && result.success) {
+    statusBar.showMessage(`Exported: ${result.filePath}`);
+  }
+}
+
+function newDiagram() {
+  const title = `Diagram ${diagramCounter++}.mmd`;
+  const tabId = tabManager.createTab(title);
+  const defaultContent = `graph TD\n    A[Start] --> B{Decision}\n    B -->|Yes| C[Action 1]\n    B -->|No| D[Action 2]\n    C --> E[End]\n    D --> E`;
+  editorManager.createEditorForTab(tabId, defaultContent, title);
+  const tab = tabManager.getTab(tabId);
+  tab.isDiagram = true;
+  tab.diagramMode = 'diagram';
+  tabManager.activate(tabId);
+}
+
 // ── Tab ↔ Editor Wiring ──
 
 function deactivatePreviousEditor() {
-  // Destroy spreadsheet viewer if previous tab was in spreadsheet mode
   const prevTab = editorManager.activeTabId ? tabManager.getTab(editorManager.activeTabId) : null;
+  // Destroy spreadsheet viewer if previous tab was in spreadsheet mode
   if (prevTab && prevTab.isSpreadsheet && prevTab.spreadsheetMode === 'spreadsheet') {
     spreadsheetViewer.destroy();
+  }
+  // Destroy diagram viewer if previous tab was in diagram mode
+  if (prevTab && prevTab.isDiagram && prevTab.diagramMode === 'diagram') {
+    diagramViewer.destroy();
   }
 
   if (editorManager.activeTabId && editorManager.editors.has(editorManager.activeTabId)) {
@@ -681,7 +750,25 @@ function deactivatePreviousEditor() {
 tabManager.onActivate((tabId) => {
   const tab = tabManager.getTab(tabId);
 
-  if (tab && tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet') {
+  if (tab && tab.isDiagram && tab.diagramMode === 'diagram') {
+    deactivatePreviousEditor();
+    editorManager.container.innerHTML = '';
+    editorManager.activeTabId = tabId;
+    const entry = editorManager.editors.get(tabId);
+    if (entry) {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      diagramViewer.render(entry.model, currentTheme);
+      diagramViewer.onChange(() => {
+        tabManager.setDirty(tabId, true);
+      });
+    }
+    statusBar.updateLanguage('Mermaid Diagram');
+    updateDiagramToolbar(true, true);
+    updateSpreadsheetToolbar(false);
+    updateTableToolbar(false);
+    updateTreeToolbar(false);
+    updateMarkdownToolbar(false);
+  } else if (tab && tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
     editorManager.activeTabId = tabId;
@@ -693,6 +780,7 @@ tabManager.onActivate((tabId) => {
     });
     statusBar.updateLanguage('Spreadsheet');
     updateSpreadsheetToolbar(true, 'spreadsheet');
+    updateDiagramToolbar(false);
     updateTableToolbar(false);
     updateTreeToolbar(false);
     updateMarkdownToolbar(false);
@@ -710,6 +798,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(tab.isTableFile || false, tab.isTableFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
     updateSpreadsheetToolbar(false);
+    updateDiagramToolbar(false);
   } else if (tab && tab.isTableFile && tab.tableMode === 'table') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
@@ -724,6 +813,7 @@ tabManager.onActivate((tabId) => {
     updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
     updateMarkdownToolbar(false);
     updateSpreadsheetToolbar(tab.isSpreadsheet || false, tab.isSpreadsheet ? 'edit' : undefined);
+    updateDiagramToolbar(false);
   } else if (tab && tab.isMarkdown && tab.markdownMode === 'read') {
     deactivatePreviousEditor();
     editorManager.container.innerHTML = '';
@@ -738,6 +828,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(false);
     updateTreeToolbar(false);
     updateSpreadsheetToolbar(false);
+    updateDiagramToolbar(false);
   } else if (tab && tab.isLargeFile) {
     // Show large file viewer
     editorContainer.innerHTML = '';
@@ -750,6 +841,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(false);
     updateTreeToolbar(false);
     updateSpreadsheetToolbar(false);
+    updateDiagramToolbar(false);
   } else if (tab && tab.isHistoryTab) {
     const entry = editorManager.editors.get(tabId);
     if (entry) {
@@ -762,6 +854,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(false);
     updateTreeToolbar(false);
     updateSpreadsheetToolbar(false);
+    updateDiagramToolbar(false);
   } else if (tab && tab.isDiffTab) {
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
@@ -769,6 +862,7 @@ tabManager.onActivate((tabId) => {
     updateTableToolbar(false);
     updateTreeToolbar(false);
     updateSpreadsheetToolbar(false);
+    updateDiagramToolbar(false);
   } else {
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
@@ -779,23 +873,27 @@ tabManager.onActivate((tabId) => {
       updateTableToolbar(false);
       updateTreeToolbar(false);
       updateSpreadsheetToolbar(false);
+      updateDiagramToolbar(false);
     } else if (tab && tab.isTableFile) {
       // Table file in edit mode
       updateTableToolbar(true, 'edit');
       updateTreeToolbar(tab.isTreeFile || false, tab.isTreeFile ? 'edit' : undefined);
       updateMarkdownToolbar(false);
       updateSpreadsheetToolbar(tab.isSpreadsheet || false, tab.isSpreadsheet ? 'edit' : undefined);
+      updateDiagramToolbar(false);
     } else if (tab && tab.isTreeFile) {
       // Tree file in edit mode (not table-compatible)
       updateTreeToolbar(true, 'edit');
       updateTableToolbar(false);
       updateMarkdownToolbar(false);
       updateSpreadsheetToolbar(false);
+      updateDiagramToolbar(false);
     } else {
       updateMarkdownToolbar(false);
       updateTableToolbar(false);
       updateTreeToolbar(false);
       updateSpreadsheetToolbar(false);
+      updateDiagramToolbar(false);
     }
   }
 
@@ -811,6 +909,11 @@ tabManager.onClose((tabId) => {
   const tab = tabManager.getTab(tabId);
   if (tab && tab.filePath) {
     window.api.unwatchFile(tab.filePath);
+  }
+
+  // Clean up diagram viewer if active
+  if (tab && tab.isDiagram && tab.diagramMode === 'diagram') {
+    diagramViewer.destroy();
   }
 
   // Clean up spreadsheet viewer if active
@@ -1027,6 +1130,12 @@ function createTabForFile(file) {
     }
   }
 
+  // Detect diagram files (.mmd, .mermaid) — default to diagram mode
+  if (isDiagramFile(filename)) {
+    tab.isDiagram = true;
+    tab.diagramMode = 'diagram';
+  }
+
   // Detect tree files (JSON/XML) — default to tree if not table-compatible
   if (isTreeFile(filename)) {
     tab.isTreeFile = true;
@@ -1037,7 +1146,7 @@ function createTabForFile(file) {
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  if (!tab.isMarkdown && !tab.isTableFile && !(tab.isTreeFile && tab.treeMode === 'tree')) {
+  if (!tab.isMarkdown && !tab.isTableFile && !(tab.isTreeFile && tab.treeMode === 'tree') && !tab.isDiagram) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
@@ -1382,6 +1491,17 @@ window.api.onFileChanged(async (filePath) => {
           const entry = editorManager.editors.get(tabId);
           if (entry) treeViewer.render(entry.model.getValue(), tab.title);
         }
+        // Re-render diagram viewer if in diagram mode
+        if (tab.isDiagram && tab.diagramMode === 'diagram' && tabId === tabManager.getActiveTabId()) {
+          const entry = editorManager.editors.get(tabId);
+          if (entry) {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            diagramViewer.render(entry.model, currentTheme);
+            diagramViewer.onChange(() => {
+              tabManager.setDirty(tabId, true);
+            });
+          }
+        }
         // Re-render spreadsheet viewer if in spreadsheet mode
         if (tab.isSpreadsheet && tab.spreadsheetMode === 'spreadsheet' && tabId === tabManager.getActiveTabId()) {
           const entry = editorManager.editors.get(tabId);
@@ -1431,6 +1551,9 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'tree-toggle': toggleTreeMode(); break;
     case 'new-spreadsheet': newSpreadsheet(); break;
     case 'spreadsheet-toggle': toggleSpreadsheetMode(); break;
+    case 'new-diagram': newDiagram(); break;
+    case 'diagram-toggle': toggleDiagramSplit(); break;
+    case 'diagram-export': exportDiagramSvg(); break;
   }
 });
 
@@ -1469,6 +1592,8 @@ window.api.onMenuGitHistory(() => showGitFileHistory());
 
 window.api.onMenuToggleNotes(() => notesPanel.toggle());
 window.api.onMenuNewSpreadsheet(() => newSpreadsheet());
+window.api.onMenuNewDiagram(() => newDiagram());
+window.api.onMenuExportDiagramSvg(() => exportDiagramSvg());
 window.api.onMenuToggleTreeView(() => toggleTreeMode());
 
 // Help documents
