@@ -18,6 +18,7 @@ const { buildMenu } = require('./menu');
 const { readFile, writeFile, readDirectory } = require('./file-service');
 const { LargeFileManager, LARGE_FILE_THRESHOLD } = require('./large-file-service');
 const gitService = require('./git-service');
+const terminalService = require('./terminal-service');
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -154,6 +155,8 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => {
+    // Clean up terminal
+    terminalService.kill();
     // Clean up all file watchers
     for (const watcher of fileWatchers.values()) {
       watcher.close();
@@ -797,4 +800,31 @@ ipcMain.handle('renderer:import-snippets', async () => {
   if (result.canceled) return null;
   const raw = await fs.promises.readFile(result.filePaths[0], 'utf-8');
   return JSON.parse(raw);
+});
+
+// ── Terminal ──
+
+ipcMain.handle('renderer:terminal-create', async (_event, { cwd }) => {
+  try {
+    const result = terminalService.create(
+      cwd,
+      (data) => { if (mainWindow) mainWindow.webContents.send('main:terminal-data', data); },
+      (exitCode) => { if (mainWindow) mainWindow.webContents.send('main:terminal-exit', exitCode); },
+    );
+    return { success: true, pid: result.pid };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.on('renderer:terminal-write', (_event, data) => {
+  terminalService.write(data);
+});
+
+ipcMain.on('renderer:terminal-resize', (_event, { cols, rows }) => {
+  terminalService.resize(cols, rows);
+});
+
+ipcMain.handle('renderer:terminal-kill', async () => {
+  terminalService.kill();
 });

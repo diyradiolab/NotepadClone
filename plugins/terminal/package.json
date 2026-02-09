@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-terminal",
+  "displayName": "Integrated Terminal",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onCommand"],
+    "contributes": {
+      "commands": ["terminal.toggle"]
+    }
+  }
+}

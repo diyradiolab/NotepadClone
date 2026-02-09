@@ -46,6 +46,9 @@ module.exports = (_env, argv) => ({
       ],
     }),
   ],
+  externals: {
+    'node-pty': 'commonjs node-pty',
+  },
   resolve: {
     extensions: ['.js'],
   },

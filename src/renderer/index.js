@@ -50,6 +50,8 @@ import * as optionsPlugin from '../../plugins/options/index';
 import optionsManifest from '../../plugins/options/package.json';
 import * as snippetsPlugin from '../../plugins/snippets/index';
 import snippetsManifest from '../../plugins/snippets/package.json';
+import * as terminalPlugin from '../../plugins/terminal/index';
+import terminalManifest from '../../plugins/terminal/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -101,6 +103,7 @@ pluginHost.register(gitManifest, gitPlugin);
 pluginHost.register(pluginManagerManifest, pluginManagerPlugin);
 pluginHost.register(optionsManifest, optionsPlugin);
 pluginHost.register(snippetsManifest, snippetsPlugin);
+pluginHost.register(terminalManifest, terminalPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -788,6 +791,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'word-wrap': editorManager.toggleWordWrap(); break;
     case 'column-select': toggleColumnSelection(); break;
     case 'sql-query': commandRegistry.execute('sqlQuery.toggle'); break;
+    case 'terminal-toggle': commandRegistry.execute('terminal.toggle'); break;
     case 'git-init': commandRegistry.execute('git.init'); break;
     case 'git-stage': commandRegistry.execute('git.stageAll'); break;
     case 'git-stage-file': commandRegistry.execute('git.stageFile'); break;
@@ -836,6 +840,7 @@ window.api.onMenuShowRecentFiles(() => commandRegistry.execute('recentFiles.show
 window.api.onMenuClipboardHistory(() => commandRegistry.execute('clipboardHistory.show'));
 window.api.onMenuSqlQuery(() => commandRegistry.execute('sqlQuery.toggle'));
 window.api.onMenuSnippets(() => commandRegistry.execute('snippets.show'));
+window.api.onMenuToggleTerminal(() => commandRegistry.execute('terminal.toggle'));
 window.api.onMenuCompareTabs(() => commandRegistry.execute('compareTabs.show'));
 window.api.onMenuGitHistory(() => commandRegistry.execute('git.fileHistory'));
 window.api.onMenuToggleNotes(() => commandRegistry.execute('notes.toggle'));

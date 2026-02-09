@@ -79,6 +79,9 @@
       <button class="toolbar-btn" data-action="sql-query" title="SQL Query (Ctrl+Shift+Q)">
         <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><line x1="1.5" y1="5.5" x2="14.5" y2="5.5"/><line x1="1.5" y1="9" x2="14.5" y2="9"/><line x1="5.5" y1="5.5" x2="5.5" y2="14"/><line x1="10.5" y1="5.5" x2="10.5" y2="14"/></svg></span>
       </button>
+      <button class="toolbar-btn" data-action="terminal-toggle" id="btn-terminal-toggle" title="Toggle Terminal (Ctrl+`)">
+        <span class="toolbar-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="13" height="12" rx="1"/><polyline points="5,6 7.5,8.5 5,11"/><line x1="9" y1="11" x2="12" y2="11"/></svg></span>
+      </button>
       <span class="toolbar-separator" id="md-separator" style="display:none"></span>
       <button class="toolbar-btn" data-action="markdown-toggle" id="btn-markdown-toggle" title="Toggle Read/Edit Mode (Ctrl+Shift+M)" style="display:none">
         <span class="toolbar-icon" id="md-toggle-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3.5h14v10H1z"/><path d="M4 8.5l2 2 2-2"/><path d="M10 7v4"/><path d="M12 7v4"/><path d="M12 7l-1 2 1 2"/></svg></span>
@@ -147,6 +150,9 @@
 
     <!-- SQL Query panel -->
     <div id="sql-query" class="sql-query hidden"></div>
+
+    <!-- Terminal panel -->
+    <div id="terminal-panel" class="terminal-panel hidden"></div>
 
     <!-- Status bar -->
     <div id="status-bar" class="status-bar">

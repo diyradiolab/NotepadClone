@@ -147,6 +147,23 @@ contextBridge.exposeInMainWorld('api', {
   importSnippets: () => ipcRenderer.invoke('renderer:import-snippets'),
   onMenuSnippets: (callback) => ipcRenderer.on('main:snippets', callback),
 
+  // Terminal
+  terminalCreate: (options) => ipcRenderer.invoke('renderer:terminal-create', options),
+  terminalWrite: (data) => ipcRenderer.send('renderer:terminal-write', data),
+  terminalResize: (cols, rows) => ipcRenderer.send('renderer:terminal-resize', { cols, rows }),
+  terminalKill: () => ipcRenderer.invoke('renderer:terminal-kill'),
+  onTerminalData: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('main:terminal-data', handler);
+    return () => ipcRenderer.removeListener('main:terminal-data', handler);
+  },
+  onTerminalExit: (callback) => {
+    const handler = (_event, exitCode) => callback(exitCode);
+    ipcRenderer.on('main:terminal-exit', handler);
+    return () => ipcRenderer.removeListener('main:terminal-exit', handler);
+  },
+  onMenuToggleTerminal: (callback) => ipcRenderer.on('main:toggle-terminal', callback),
+
   // Plugin Manager
   onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
 

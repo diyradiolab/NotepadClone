@@ -258,6 +258,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => mainWindow.webContents.send('main:toggle-tree-view'),
         },
+        {
+          label: 'Terminal',
+          accelerator: 'Ctrl+`',
+          click: () => mainWindow.webContents.send('main:toggle-terminal'),
+        },
         { type: 'separator' },
         {
           label: 'Options...',
