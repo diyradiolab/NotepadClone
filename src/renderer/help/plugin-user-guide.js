@@ -1,6 +1,6 @@
 export const PLUGIN_USER_GUIDE = `# Using Plugins
 
-NotepadClone includes 15 built-in plugins that provide viewers, editing tools, panels, and integrations. Everything beyond the core text editor is a plugin.
+NotepadClone includes 16 built-in plugins that provide viewers, editing tools, panels, and integrations. Everything beyond the core text editor is a plugin. Use the **Plugin Manager** (View > Plugin Manager or Ctrl+Shift+P) to see all plugins, check what each one contributes, and enable or disable them.
 
 ---
 
@@ -32,6 +32,7 @@ These plugins add panels, dialogs, and tools accessible from the menu or toolbar
 | **Clipboard History** | Edit > Clipboard History (Ctrl+Shift+V) | Ring buffer of recent clipboard entries for quick paste |
 | **Recent Files** | File > Recent Files > Show All (Ctrl+E) | Quick-access list of recently opened files |
 | **Compare Tabs** | Tools > Compare Active Tab With... | Side-by-side diff of two open tabs |
+| **Plugin Manager** | View > Plugin Manager (Ctrl+Shift+P) | View, enable, and disable plugins |
 
 ### Integration Plugins
 
@@ -94,6 +95,7 @@ The edit mode always shows the raw file content in the Monaco editor, so you can
 |----------|--------|
 | Ctrl+B | Toggle file explorer |
 | Ctrl+Shift+N | Toggle notes panel |
+| Ctrl+Shift+P | Plugin Manager |
 | Ctrl+Shift+R | Toggle tree view |
 | Alt+W | Toggle word wrap |
 | Ctrl+Shift+8 | Show all characters |
@@ -230,6 +232,16 @@ Git operations directly from the toolbar:
 - **Commit** — Commit with a message (auto-stages if nothing is staged)
 - **Push / Pull** — Sync with remote
 - **File History** — View commit log for the active file with inline diffs
+
+### Plugin Manager
+
+View and manage all installed plugins from a single dialog.
+- **Open:** View > Plugin Manager or Ctrl+Shift+P
+- **Plugin list:** Left panel shows all plugins with green/gray status dots
+- **Detail panel:** Right panel shows the selected plugin's version, activation events, and contributions (commands, viewers, toolbar buttons)
+- **Enable/Disable:** Toggle any plugin on or off (except Plugin Manager itself)
+- **Persistence:** Disabled plugins stay disabled across app restarts (stored in localStorage)
+- **Search:** Filter the plugin list by name
 
 ### Core Editing
 
