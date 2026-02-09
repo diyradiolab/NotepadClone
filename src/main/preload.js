@@ -164,6 +164,9 @@ contextBridge.exposeInMainWorld('api', {
   },
   onMenuToggleTerminal: (callback) => ipcRenderer.on('main:toggle-terminal', callback),
 
+  // Command Palette
+  onMenuCommandPalette: (callback) => ipcRenderer.on('main:command-palette', callback),
+
   // Plugin Manager
   onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
 

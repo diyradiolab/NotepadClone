@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-command-palette",
+  "displayName": "Command Palette",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["commandPalette.show"]
+    }
+  }
+}

@@ -52,6 +52,8 @@ import * as snippetsPlugin from '../../plugins/snippets/index';
 import snippetsManifest from '../../plugins/snippets/package.json';
 import * as terminalPlugin from '../../plugins/terminal/index';
 import terminalManifest from '../../plugins/terminal/package.json';
+import * as commandPalettePlugin from '../../plugins/command-palette/index';
+import commandPaletteManifest from '../../plugins/command-palette/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -104,6 +106,7 @@ pluginHost.register(pluginManagerManifest, pluginManagerPlugin);
 pluginHost.register(optionsManifest, optionsPlugin);
 pluginHost.register(snippetsManifest, snippetsPlugin);
 pluginHost.register(terminalManifest, terminalPlugin);
+pluginHost.register(commandPaletteManifest, commandPalettePlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -848,6 +851,7 @@ window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('spreadsheet.new')
 window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
+window.api.onMenuCommandPalette(() => commandRegistry.execute('commandPalette.show'));
 window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));
 window.api.onMenuOptions(() => commandRegistry.execute('options.show'));
 

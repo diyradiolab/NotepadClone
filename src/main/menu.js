@@ -270,8 +270,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:options'),
         },
         {
-          label: 'Plugin Manager',
+          label: 'Command Palette...',
           accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => mainWindow.webContents.send('main:command-palette'),
+        },
+        {
+          label: 'Plugin Manager',
           click: () => mainWindow.webContents.send('main:plugin-manager'),
         },
         { type: 'separator' },
