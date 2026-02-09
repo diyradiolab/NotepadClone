@@ -140,6 +140,13 @@ contextBridge.exposeInMainWorld('api', {
   exportSvgFile: (svgContent, defaultPath) =>
     ipcRenderer.invoke('renderer:export-svg-file', { svgContent, defaultPath }),
 
+  // Snippets
+  getSnippets: () => ipcRenderer.invoke('renderer:get-snippets'),
+  saveSnippets: (snippets) => ipcRenderer.invoke('renderer:save-snippets', snippets),
+  exportSnippets: (snippets) => ipcRenderer.invoke('renderer:export-snippets', snippets),
+  importSnippets: () => ipcRenderer.invoke('renderer:import-snippets'),
+  onMenuSnippets: (callback) => ipcRenderer.on('main:snippets', callback),
+
   // Plugin Manager
   onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
 

@@ -220,6 +220,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Shift+Q',
           click: () => mainWindow.webContents.send('main:sql-query'),
         },
+        { type: 'separator' },
+        {
+          label: 'Code Snippets...',
+          accelerator: 'CmdOrCtrl+Alt+S',
+          click: () => mainWindow.webContents.send('main:snippets'),
+        },
       ],
     },
 

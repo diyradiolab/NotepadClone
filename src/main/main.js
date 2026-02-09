@@ -59,6 +59,7 @@ const store = new Store({
     clipboardRing: [],
     windowBounds: { width: 1200, height: 800 },
     theme: 'system',
+    snippets: [],
     options: OPTIONS_DEFAULTS,
   },
 });
@@ -759,6 +760,36 @@ ipcMain.handle('renderer:export-svg-file', async (_event, { svgContent, defaultP
 });
 
 ipcMain.handle('renderer:import-notes', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return null;
+  const raw = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+  return JSON.parse(raw);
+});
+
+// ── Snippets ──
+
+ipcMain.handle('renderer:get-snippets', async () => {
+  return store.get('snippets', []);
+});
+
+ipcMain.handle('renderer:save-snippets', async (_event, snippets) => {
+  store.set('snippets', snippets);
+});
+
+ipcMain.handle('renderer:export-snippets', async (_event, snippets) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: 'snippets-export.json',
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return { success: false };
+  await fs.promises.writeFile(result.filePath, JSON.stringify(snippets, null, 2), 'utf-8');
+  return { success: true, filePath: result.filePath };
+});
+
+ipcMain.handle('renderer:import-snippets', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [{ name: 'JSON Files', extensions: ['json'] }],

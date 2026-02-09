@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-snippets",
+  "displayName": "Code Snippets",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["snippets.show", "snippets.saveSelection"]
+    }
+  }
+}
