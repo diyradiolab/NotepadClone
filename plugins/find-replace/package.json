@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-find-replace",
+  "displayName": "Find & Replace",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["findReplace.find", "findReplace.findInFiles"]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "notepadclone-table-viewer",
+  "displayName": "Table Viewer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:csv", "onFileType:tsv", "onFileType:json", "onFileType:xml"],
+    "contributes": {
+      "viewers": ["table-view"],
+      "commands": ["table.toggleMode"],
+      "toolbarButtons": ["table-toggle"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "notepadclone-markdown",
+  "displayName": "Markdown Preview",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:markdown"],
+    "contributes": {
+      "fileTypes": ["markdown"],
+      "viewers": ["markdown-preview"],
+      "commands": ["markdown.toggleMode"],
+      "toolbarButtons": ["markdown-toggle"]
+    }
+  }
+}

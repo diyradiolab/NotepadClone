@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-recent-files",
+  "displayName": "Recent Files",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["recentFiles.show"]
+    }
+  }
+}

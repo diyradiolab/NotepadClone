@@ -1,0 +1,21 @@
+{
+  "name": "notepadclone-core-editing",
+  "displayName": "Core Editing",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": [
+        "text-transform",
+        "markdown-format",
+        "toggle-word-wrap",
+        "toggle-column-selection",
+        "zoom-in",
+        "zoom-out",
+        "reset-zoom",
+        "go-to-line",
+        "toggle-show-all-chars"
+      ]
+    }
+  }
+}

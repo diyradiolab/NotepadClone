@@ -1,0 +1,13 @@
+{
+  "name": "notepadclone-diagram",
+  "displayName": "Mermaid Diagram Viewer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:mermaid", "onCommand"],
+    "contributes": {
+      "viewers": ["diagram-view"],
+      "commands": ["diagram.toggleSplit", "diagram.exportSvg", "diagram.new"],
+      "toolbarButtons": ["diagram-toggle", "diagram-export", "new-diagram"]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-clipboard-history",
+  "displayName": "Clipboard History",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onCommand"],
+    "contributes": {
+      "commands": ["clipboardHistory.show"]
+    }
+  }
+}

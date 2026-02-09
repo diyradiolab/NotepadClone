@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-large-file",
+  "displayName": "Large File Viewer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:large"],
+    "contributes": {
+      "viewers": ["large-file-view"]
+    }
+  }
+}

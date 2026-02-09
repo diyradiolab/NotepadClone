@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-compare-tabs",
+  "displayName": "Compare Tabs",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onCommand"],
+    "contributes": {
+      "commands": ["compareTabs.show"]
+    }
+  }
+}

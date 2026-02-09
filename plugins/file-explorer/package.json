@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-file-explorer",
+  "displayName": "File Explorer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": ["fileExplorer.toggle", "fileExplorer.openFolder"]
+    }
+  }
+}

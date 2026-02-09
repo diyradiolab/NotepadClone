@@ -1,0 +1,13 @@
+{
+  "name": "notepadclone-spreadsheet",
+  "displayName": "Spreadsheet Viewer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:csv", "onCommand"],
+    "contributes": {
+      "viewers": ["spreadsheet-view"],
+      "commands": ["spreadsheet.toggleMode", "spreadsheet.new"],
+      "toolbarButtons": ["spreadsheet-toggle", "new-spreadsheet"]
+    }
+  }
+}

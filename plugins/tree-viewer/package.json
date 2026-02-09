@@ -1,0 +1,13 @@
+{
+  "name": "notepadclone-tree-viewer",
+  "displayName": "Tree Viewer",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onFileType:json", "onFileType:xml"],
+    "contributes": {
+      "viewers": ["tree-view"],
+      "commands": ["tree.toggleMode"],
+      "toolbarButtons": ["tree-toggle"]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-sql-query",
+  "displayName": "SQL Query Builder",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onCommand"],
+    "contributes": {
+      "commands": ["sqlQuery.toggle", "sqlQuery.help"]
+    }
+  }
+}

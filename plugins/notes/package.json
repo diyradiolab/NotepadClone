@@ -1,0 +1,11 @@
+{
+  "name": "notepadclone-notes",
+  "displayName": "Notes Panel",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onCommand"],
+    "contributes": {
+      "commands": ["notes.toggle"]
+    }
+  }
+}

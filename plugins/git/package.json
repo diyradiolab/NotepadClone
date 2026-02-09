@@ -1,0 +1,14 @@
+{
+  "name": "notepadclone-git",
+  "displayName": "Git Integration",
+  "version": "1.0.0",
+  "notepadclone": {
+    "activationEvents": ["onStartup"],
+    "contributes": {
+      "commands": [
+        "git.init", "git.stageAll", "git.stageFile",
+        "git.commit", "git.push", "git.pull", "git.fileHistory"
+      ]
+    }
+  }
+}
