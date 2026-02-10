@@ -4,8 +4,9 @@
  * Persisted via electron-store through IPC.
  */
 export class CaptainsLogPanel {
-  constructor(container) {
+  constructor(container, title) {
     this.container = container;
+    this._title = title || "Captain's Log";
     this.entries = {};        // { 'YYYY-MM-DD': 'content string' }
     this.activeDateKey = null;
     this.searchQuery = '';
@@ -62,13 +63,19 @@ export class CaptainsLogPanel {
     }
   }
 
+  setTitle(title) {
+    this._title = title;
+    const el = this.container.querySelector('.cl-header-title');
+    if (el) el.textContent = title.toUpperCase();
+  }
+
   // ── Render ──
 
   _render() {
     this.container.innerHTML = `
       <div class="cl-resize"></div>
       <div class="cl-header panel-header">
-        <span class="cl-header-title">CAPTAIN'S LOG</span>
+        <span class="cl-header-title">${this._title.toUpperCase()}</span>
       </div>
       <div class="cl-search">
         <input type="text" class="cl-search-input" placeholder="Search entries..." />

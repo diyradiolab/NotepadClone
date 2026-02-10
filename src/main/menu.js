@@ -258,7 +258,7 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:toggle-notes'),
         },
         {
-          label: "Captain's Log",
+          label: store ? (store.get('options.plugin.notepadclone-captains-log.general.panelTitle') || "Captain's Log") : "Captain's Log",
           accelerator: 'CmdOrCtrl+Shift+L',
           click: () => mainWindow.webContents.send('main:toggle-captains-log'),
         },

@@ -50,14 +50,14 @@ export class SettingsService {
   }
 
   async init() {
-    const stored = await window.api.getOptions();
+    this._stored = await window.api.getOptions();
     // Build flat values from schema defaults, then overlay stored values
     this._values = {};
     for (const [section, def] of Object.entries(this._schema)) {
       for (const [key, setting] of Object.entries(def.settings)) {
         const flatKey = `${section}.${key}`;
-        this._values[flatKey] = (stored && stored[section] && stored[section][key] !== undefined)
-          ? stored[section][key]
+        this._values[flatKey] = (this._stored && this._stored[section] && this._stored[section][key] !== undefined)
+          ? this._stored[section][key]
           : setting.default;
       }
     }
@@ -98,11 +98,20 @@ export class SettingsService {
 
   registerSettings({ pluginId, category, label, settings }) {
     this._pluginSettings[pluginId] = { category, label, settings };
-    // Initialize defaults for any plugin settings not yet in values
+    // Initialize from stored values, falling back to defaults
     for (const [key, setting] of Object.entries(settings)) {
       const flatKey = `${category}.${key}`;
       if (this._values[flatKey] === undefined) {
-        this._values[flatKey] = setting.default;
+        // Try to restore persisted value by navigating the nested store object
+        let val;
+        if (this._stored) {
+          val = this._stored;
+          for (const part of flatKey.split('.')) {
+            if (val && typeof val === 'object') val = val[part];
+            else { val = undefined; break; }
+          }
+        }
+        this._values[flatKey] = val !== undefined ? val : setting.default;
       }
     }
   }
