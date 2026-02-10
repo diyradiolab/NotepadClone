@@ -56,6 +56,8 @@ import * as commandPalettePlugin from '../../plugins/command-palette/index';
 import commandPaletteManifest from '../../plugins/command-palette/package.json';
 import * as captainsLogPlugin from '../../plugins/captains-log/index';
 import captainsLogManifest from '../../plugins/captains-log/package.json';
+import * as webDashboardPlugin from '../../plugins/web-dashboard/index';
+import webDashboardManifest from '../../plugins/web-dashboard/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -111,6 +113,7 @@ pluginHost.register(snippetsManifest, snippetsPlugin);
 pluginHost.register(terminalManifest, terminalPlugin);
 pluginHost.register(commandPaletteManifest, commandPalettePlugin);
 pluginHost.register(captainsLogManifest, captainsLogPlugin);
+pluginHost.register(webDashboardManifest, webDashboardPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -247,7 +250,8 @@ tabManager.onActivate((tabId) => {
     (tab && tab.isTreeFile && tab.treeMode === 'tree') ||
     (tab && tab.isTableFile && tab.tableMode === 'table') ||
     (tab && tab.isMarkdown && tab.markdownMode === 'read') ||
-    (tab && tab.isLargeFile);
+    (tab && tab.isLargeFile) ||
+    (tab && tab.isDashboard);
 
   if (isSpecialViewer) {
     deactivatePreviousEditor();
@@ -818,6 +822,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'new-spreadsheet': commandRegistry.execute('spreadsheet.new'); break;
     case 'spreadsheet-toggle': commandRegistry.execute('spreadsheet.toggleMode'); break;
     case 'new-diagram': commandRegistry.execute('diagram.new'); break;
+    case 'new-dashboard': commandRegistry.execute('webDashboard.open'); break;
     case 'diagram-toggle': commandRegistry.execute('diagram.toggleSplit'); break;
     case 'diagram-export': commandRegistry.execute('diagram.exportSvg'); break;
   }
@@ -871,6 +876,7 @@ window.api.onMenuToggleCaptainsLog(() => commandRegistry.execute('captainsLog.to
 window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('spreadsheet.new'));
 window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
+window.api.onMenuNewDashboard(() => commandRegistry.execute('webDashboard.open'));
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
 window.api.onMenuCommandPalette(() => commandRegistry.execute('commandPalette.show'));
 window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));

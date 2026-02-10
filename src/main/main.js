@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, nativeTheme, protocol, net, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, dialog, nativeTheme, protocol, net, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
@@ -61,6 +61,7 @@ const store = new Store({
     windowBounds: { width: 1200, height: 800 },
     theme: 'system',
     snippets: [],
+    dashboardLinks: [],
     options: OPTIONS_DEFAULTS,
   },
 });
@@ -107,6 +108,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: false, // deprecated; dashboard uses WebContentsView instead
     },
     icon: path.join(__dirname, '../../assets/icons/app-icon.png'),
   });
@@ -810,6 +812,111 @@ ipcMain.handle('renderer:import-snippets', async () => {
   if (result.canceled) return null;
   const raw = await fs.promises.readFile(result.filePaths[0], 'utf-8');
   return JSON.parse(raw);
+});
+
+// ── Web Dashboard ──
+
+ipcMain.handle('renderer:get-dashboard-links', async () => {
+  return store.get('dashboardLinks', []);
+});
+
+ipcMain.handle('renderer:save-dashboard-links', async (_event, links) => {
+  // Validate input: must be an array of { id, name, url } objects, max 100
+  if (!Array.isArray(links) || links.length > 100) return;
+  const valid = links.every(l =>
+    l && typeof l.id === 'number' && typeof l.name === 'string' && typeof l.url === 'string' &&
+    l.name.length <= 200 && l.url.length <= 2000
+  );
+  if (!valid) return;
+  store.set('dashboardLinks', links);
+});
+
+// Dashboard embedded browser (WebContentsView — recommended replacement for <webview>)
+const dashboardViews = new Map(); // browserId → WebContentsView
+
+ipcMain.handle('renderer:dashboard-browser-create', async (_event, { browserId }) => {
+  if (dashboardViews.has(browserId)) return;
+  const view = new WebContentsView({
+    webPreferences: {
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+    },
+  });
+  dashboardViews.set(browserId, view);
+  mainWindow.contentView.addChildView(view);
+  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+
+  // Allow popups for OAuth flows
+  view.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return { action: 'allow' };
+    }
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // Forward navigation events to renderer
+  view.webContents.on('did-navigate', () => {
+    if (!mainWindow) return;
+    mainWindow.webContents.send('main:dashboard-browser-navigated', {
+      browserId,
+      url: view.webContents.getURL(),
+      canGoBack: view.webContents.canGoBack(),
+      canGoForward: view.webContents.canGoForward(),
+    });
+  });
+  view.webContents.on('did-navigate-in-page', () => {
+    if (!mainWindow) return;
+    mainWindow.webContents.send('main:dashboard-browser-navigated', {
+      browserId,
+      url: view.webContents.getURL(),
+      canGoBack: view.webContents.canGoBack(),
+      canGoForward: view.webContents.canGoForward(),
+    });
+  });
+  view.webContents.on('page-title-updated', (_e, title) => {
+    if (!mainWindow) return;
+    mainWindow.webContents.send('main:dashboard-browser-title', { browserId, title });
+  });
+  view.webContents.on('did-fail-load', (_e, errorCode, errorDescription) => {
+    if (errorCode === -3) return; // aborted
+    if (!mainWindow) return;
+    mainWindow.webContents.send('main:dashboard-browser-load-failed', { browserId, errorCode, errorDescription });
+  });
+});
+
+ipcMain.handle('renderer:dashboard-browser-destroy', async (_event, { browserId }) => {
+  const view = dashboardViews.get(browserId);
+  if (!view) return;
+  mainWindow.contentView.removeChildView(view);
+  view.webContents.close();
+  dashboardViews.delete(browserId);
+});
+
+ipcMain.handle('renderer:dashboard-browser-navigate', async (_event, { browserId, url }) => {
+  const view = dashboardViews.get(browserId);
+  if (view) view.webContents.loadURL(url);
+});
+
+ipcMain.handle('renderer:dashboard-browser-back', async (_event, { browserId }) => {
+  const view = dashboardViews.get(browserId);
+  if (view && view.webContents.canGoBack()) view.webContents.goBack();
+});
+
+ipcMain.handle('renderer:dashboard-browser-forward', async (_event, { browserId }) => {
+  const view = dashboardViews.get(browserId);
+  if (view && view.webContents.canGoForward()) view.webContents.goForward();
+});
+
+ipcMain.handle('renderer:dashboard-browser-reload', async (_event, { browserId }) => {
+  const view = dashboardViews.get(browserId);
+  if (view) view.webContents.reload();
+});
+
+ipcMain.handle('renderer:dashboard-browser-set-bounds', async (_event, { browserId, bounds }) => {
+  const view = dashboardViews.get(browserId);
+  if (view) view.setBounds(bounds);
 });
 
 // ── Terminal ──

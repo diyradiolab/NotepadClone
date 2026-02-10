@@ -50,6 +50,10 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:new-diagram'),
         },
         {
+          label: 'New Dashboard',
+          click: () => mainWindow.webContents.send('main:new-dashboard'),
+        },
+        {
           label: '&Open...',
           accelerator: 'CmdOrCtrl+O',
           click: () => mainWindow.webContents.send('main:open-file'),

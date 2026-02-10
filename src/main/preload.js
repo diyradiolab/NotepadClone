@@ -152,6 +152,21 @@ contextBridge.exposeInMainWorld('api', {
   importSnippets: () => ipcRenderer.invoke('renderer:import-snippets'),
   onMenuSnippets: (callback) => ipcRenderer.on('main:snippets', callback),
 
+  // Web Dashboard
+  getDashboardLinks: () => ipcRenderer.invoke('renderer:get-dashboard-links'),
+  saveDashboardLinks: (links) => ipcRenderer.invoke('renderer:save-dashboard-links', links),
+  onMenuNewDashboard: (callback) => ipcRenderer.on('main:new-dashboard', callback),
+  dashboardBrowserCreate: (browserId) => ipcRenderer.invoke('renderer:dashboard-browser-create', { browserId }),
+  dashboardBrowserDestroy: (browserId) => ipcRenderer.invoke('renderer:dashboard-browser-destroy', { browserId }),
+  dashboardBrowserNavigate: (browserId, url) => ipcRenderer.invoke('renderer:dashboard-browser-navigate', { browserId, url }),
+  dashboardBrowserBack: (browserId) => ipcRenderer.invoke('renderer:dashboard-browser-back', { browserId }),
+  dashboardBrowserForward: (browserId) => ipcRenderer.invoke('renderer:dashboard-browser-forward', { browserId }),
+  dashboardBrowserReload: (browserId) => ipcRenderer.invoke('renderer:dashboard-browser-reload', { browserId }),
+  dashboardBrowserSetBounds: (browserId, bounds) => ipcRenderer.invoke('renderer:dashboard-browser-set-bounds', { browserId, bounds }),
+  onDashboardBrowserNavigated: (callback) => ipcRenderer.on('main:dashboard-browser-navigated', (_e, data) => callback(data)),
+  onDashboardBrowserTitle: (callback) => ipcRenderer.on('main:dashboard-browser-title', (_e, data) => callback(data)),
+  onDashboardBrowserLoadFailed: (callback) => ipcRenderer.on('main:dashboard-browser-load-failed', (_e, data) => callback(data)),
+
   // Terminal
   terminalCreate: (options) => ipcRenderer.invoke('renderer:terminal-create', options),
   terminalWrite: (data) => ipcRenderer.send('renderer:terminal-write', data),

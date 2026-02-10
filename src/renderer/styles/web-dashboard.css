@@ -1,0 +1,257 @@
+/* ── Web Dashboard ── */
+
+.wd-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  z-index: 5;
+}
+
+.wd-container.hidden {
+  display: none;
+}
+
+/* ── Browser Toolbar ── */
+
+.wd-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.wd-toolbar button {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  min-width: 28px;
+  text-align: center;
+}
+
+.wd-toolbar button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.wd-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.wd-url-bar {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.wd-url-bar:focus {
+  border-color: var(--accent-color, #007acc);
+}
+
+/* ── Browser View ── */
+
+.wd-browser {
+  flex: 1;
+  position: relative;
+}
+
+.wd-browser webview {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Dashboard Grid ── */
+
+.wd-grid-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+}
+
+.wd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.wd-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  transition: background 0.15s, border-color 0.15s;
+  text-align: center;
+  min-height: 90px;
+}
+
+.wd-tile:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-color, #007acc);
+}
+
+.wd-tile-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.wd-tile-url {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.wd-tile-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.wd-tile:hover .wd-tile-delete {
+  opacity: 0.6;
+}
+
+.wd-tile-delete:hover {
+  opacity: 1 !important;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Add Tile ── */
+
+.wd-add-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  min-height: 90px;
+  color: var(--text-muted);
+  font-size: 24px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.wd-add-tile:hover {
+  border-color: var(--accent-color, #007acc);
+  color: var(--accent-color, #007acc);
+}
+
+.wd-add-label {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* ── Add Form (inline) ── */
+
+.wd-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--accent-color, #007acc);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  min-height: 90px;
+}
+
+.wd-add-form input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.wd-add-form input:focus {
+  border-color: var(--accent-color, #007acc);
+}
+
+.wd-add-form-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.wd-add-form-buttons button {
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.wd-add-form-buttons button.wd-btn-save {
+  background: var(--accent-color, #007acc);
+  color: #fff;
+  border-color: var(--accent-color, #007acc);
+}
+
+/* ── Empty State ── */
+
+.wd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+  gap: 12px;
+}
+
+.wd-empty-msg {
+  text-align: center;
+}
