@@ -29,6 +29,20 @@ Query any open text file with SQL. Lines become rows, columns split by delimiter
 SELECT * FROM data WHERE _line LIKE '%ERROR%' ORDER BY _num DESC LIMIT 50
 ```
 
+## Web Version
+
+Run NotepadClone in the browser — no Electron required.
+
+```bash
+npm run build:web
+npx serve dist-web
+```
+
+Deploy `dist-web/` to any static host (Netlify, Vercel, GitHub Pages, S3).
+
+Uses the File System Access API for open/save and localStorage for persistence.
+Git, terminal, file explorer, and large file viewer are desktop-only.
+
 ## Build for Distribution
 
 ```bash
