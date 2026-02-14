@@ -1931,6 +1931,7 @@ export class SqlQueryPanel {
           <button class="sqp-test-conn-btn">Test Connection</button>
           <span class="sqp-test-conn-status"></span>
         </div>
+        <div class="sqp-mssql-tables-info"></div>
       </div>
 
       <div class="sqp-prompt-error"></div>
@@ -1947,7 +1948,8 @@ export class SqlQueryPanel {
     const sqliteFields = dialog.querySelector('.sqp-sqlite-fields');
     const sqlitePathInput = dialog.querySelector('.sqp-sqlite-path');
     const browseBtn = dialog.querySelector('.sqp-browse-btn');
-    const tablesInfo = dialog.querySelector('.sqp-sqlite-tables-info');
+    const sqliteTablesInfo = dialog.querySelector('.sqp-sqlite-tables-info');
+    const mssqlTablesInfo = dialog.querySelector('.sqp-mssql-tables-info');
     const conflictWarning = dialog.querySelector('.sqp-table-conflict-warning');
     const mssqlFields = dialog.querySelector('.sqp-mssql-fields');
     const errorEl = dialog.querySelector('.sqp-prompt-error');
@@ -1957,17 +1959,20 @@ export class SqlQueryPanel {
     const testStatus = dialog.querySelector('.sqp-test-conn-status');
     const radios = dialog.querySelectorAll('input[name="sqp-db-type"]');
 
-    // State for SQLite file selection
+    // State for file/connection selection
     let sqliteFilePath = null;
     let sqliteExistingTables = [];
+    let mssqlExistingTables = [];
 
     tableNameInput.focus();
     tableNameInput.select();
 
-    // Check table name against existing tables and show inline warning
+    // Check table name against existing tables for the active db type
     const checkTableConflict = () => {
+      const dbType = dialog.querySelector('input[name="sqp-db-type"]:checked').value;
+      const tables = dbType === 'sqlite' ? sqliteExistingTables : mssqlExistingTables;
       const name = tableNameInput.value.trim().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1');
-      if (sqliteExistingTables.includes(name)) {
+      if (tables.includes(name)) {
         conflictWarning.textContent = `Table "${name}" already exists and will be replaced.`;
         conflictWarning.className = 'sqp-table-conflict-warning sqp-conflict-active';
       } else {
@@ -1978,6 +1983,16 @@ export class SqlQueryPanel {
 
     tableNameInput.addEventListener('input', checkTableConflict);
 
+    // Helper to show tables info in either section
+    const showTablesInfo = (el, tables, emptyMsg) => {
+      if (tables.length > 0) {
+        el.textContent = `Existing tables: ${tables.join(', ')}`;
+      } else {
+        el.textContent = emptyMsg || '';
+      }
+      el.className = el.className.replace(' sqp-tables-info-active', '') + ' sqp-tables-info-active';
+    };
+
     // Browse for SQLite file
     browseBtn.addEventListener('click', async () => {
       const filePath = await window.api.pickSQLiteFile();
@@ -1987,16 +2002,13 @@ export class SqlQueryPanel {
       sqlitePathInput.value = filePath;
       errorEl.textContent = '';
 
-      // Read existing tables
       const result = await window.api.getSQLiteTables(filePath);
-      if (result.success && result.tables.length > 0) {
+      if (result.success) {
         sqliteExistingTables = result.tables;
-        tablesInfo.textContent = `Existing tables: ${result.tables.join(', ')}`;
-        tablesInfo.className = 'sqp-sqlite-tables-info sqp-tables-info-active';
+        showTablesInfo(sqliteTablesInfo, result.tables, 'New database (no existing tables).');
       } else {
         sqliteExistingTables = [];
-        tablesInfo.textContent = result.success ? 'New database (no existing tables).' : '';
-        tablesInfo.className = 'sqp-sqlite-tables-info sqp-tables-info-active';
+        sqliteTablesInfo.textContent = '';
       }
 
       checkTableConflict();
@@ -2008,19 +2020,20 @@ export class SqlQueryPanel {
         const isMSSQL = dialog.querySelector('input[name="sqp-db-type"]:checked').value === 'mssql';
         sqliteFields.style.display = isMSSQL ? 'none' : '';
         mssqlFields.style.display = isMSSQL ? '' : 'none';
-        conflictWarning.textContent = '';
-        conflictWarning.className = 'sqp-table-conflict-warning';
         errorEl.textContent = '';
         testStatus.textContent = '';
         testStatus.className = 'sqp-test-conn-status';
+        checkTableConflict();
       });
     }
 
-    // Test Connection
+    // Test Connection (also fetches existing tables)
     testBtn.addEventListener('click', async () => {
       testStatus.textContent = 'Connecting...';
       testStatus.className = 'sqp-test-conn-status sqp-test-pending';
       testBtn.disabled = true;
+      mssqlTablesInfo.textContent = '';
+      mssqlTablesInfo.className = 'sqp-mssql-tables-info';
 
       const config = this._getMSSQLConfigFromDialog(dialog);
       try {
@@ -2028,13 +2041,18 @@ export class SqlQueryPanel {
         if (result.success) {
           testStatus.textContent = 'Connected';
           testStatus.className = 'sqp-test-conn-status sqp-test-success';
+          mssqlExistingTables = result.tables || [];
+          showTablesInfo(mssqlTablesInfo, mssqlExistingTables, 'No existing tables.');
+          checkTableConflict();
         } else {
           testStatus.textContent = result.error || 'Failed';
           testStatus.className = 'sqp-test-conn-status sqp-test-error';
+          mssqlExistingTables = [];
         }
       } catch (err) {
         testStatus.textContent = err.message || 'Failed';
         testStatus.className = 'sqp-test-conn-status sqp-test-error';
+        mssqlExistingTables = [];
       }
       testBtn.disabled = false;
     });

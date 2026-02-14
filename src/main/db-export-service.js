@@ -208,8 +208,15 @@ async function testMSSQLConnection(config) {
     };
 
     pool = await new mssql.ConnectionPool(connConfig).connect();
+
+    // Fetch existing user table names while connected
+    const result = await pool.request().query(
+      "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
+    );
+    const tables = result.recordset.map(r => r.TABLE_NAME);
+
     await pool.close();
-    return { success: true };
+    return { success: true, tables };
   } catch (err) {
     if (pool) try { await pool.close(); } catch { /* ignore */ }
     return { success: false, error: err.message };

@@ -845,14 +845,16 @@
   background: var(--bg-tertiary);
 }
 
-.sqp-sqlite-tables-info {
+.sqp-sqlite-tables-info,
+.sqp-mssql-tables-info {
   font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 8px;
   display: none;
 }
 
-.sqp-sqlite-tables-info.sqp-tables-info-active {
+.sqp-sqlite-tables-info.sqp-tables-info-active,
+.sqp-mssql-tables-info.sqp-tables-info-active {
   display: block;
 }
 
