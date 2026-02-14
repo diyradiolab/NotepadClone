@@ -814,6 +814,60 @@
   cursor: pointer;
 }
 
+/* SQLite file picker row */
+
+.sqp-export-db-file-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sqp-export-db-file-row .sqp-prompt-input {
+  flex: 1;
+  cursor: default;
+  color: var(--text-secondary);
+}
+
+.sqp-browse-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sqp-browse-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.sqp-sqlite-tables-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: none;
+}
+
+.sqp-sqlite-tables-info.sqp-tables-info-active {
+  display: block;
+}
+
+.sqp-table-conflict-warning {
+  font-size: 11px;
+  color: #e6a817;
+  min-height: 0;
+  margin-top: 2px;
+  display: none;
+}
+
+.sqp-table-conflict-warning.sqp-conflict-active {
+  display: block;
+}
+
 .sqp-mssql-fields {
   margin-top: 10px;
   padding-top: 10px;

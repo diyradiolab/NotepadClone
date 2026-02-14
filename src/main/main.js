@@ -949,13 +949,21 @@ ipcMain.handle('renderer:terminal-kill', async () => {
 
 // ── Database Export ──
 
-ipcMain.handle('renderer:export-to-sqlite', async (_event, { tableName, columns, rows }) => {
+ipcMain.handle('renderer:pick-sqlite-file', async () => {
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: 'export.db',
     filters: [{ name: 'SQLite Database', extensions: ['db', 'sqlite', 'sqlite3'] }],
   });
-  if (result.canceled) return { success: false, canceled: true };
-  return dbExportService.exportToSQLite(result.filePath, tableName, columns, rows);
+  if (result.canceled) return null;
+  return result.filePath;
+});
+
+ipcMain.handle('renderer:get-sqlite-tables', async (_event, filePath) => {
+  return dbExportService.getSQLiteTables(filePath);
+});
+
+ipcMain.handle('renderer:export-to-sqlite', async (_event, { filePath, tableName, columns, rows }) => {
+  return dbExportService.exportToSQLite(filePath, tableName, columns, rows);
 });
 
 ipcMain.handle('renderer:export-to-mssql', async (_event, { config, tableName, columns, rows }) => {

@@ -1892,8 +1892,18 @@ export class SqlQueryPanel {
         <label><input type="radio" name="sqp-db-type" value="mssql"> SQL Server</label>
       </div>
 
+      <div class="sqp-sqlite-fields">
+        <label class="sqp-prompt-label">Database file:</label>
+        <div class="sqp-export-db-file-row">
+          <input type="text" class="sqp-prompt-input sqp-sqlite-path" readonly placeholder="No file selected" />
+          <button class="sqp-browse-btn">Browse...</button>
+        </div>
+        <div class="sqp-sqlite-tables-info"></div>
+      </div>
+
       <label class="sqp-prompt-label">Table name:</label>
       <input type="text" class="sqp-prompt-input sqp-export-table-name" value="${defaultTable}" />
+      <div class="sqp-table-conflict-warning"></div>
 
       <div class="sqp-mssql-fields" style="display:none">
         <div class="sqp-export-db-row">
@@ -1934,6 +1944,11 @@ export class SqlQueryPanel {
     this.container.appendChild(overlay);
 
     const tableNameInput = dialog.querySelector('.sqp-export-table-name');
+    const sqliteFields = dialog.querySelector('.sqp-sqlite-fields');
+    const sqlitePathInput = dialog.querySelector('.sqp-sqlite-path');
+    const browseBtn = dialog.querySelector('.sqp-browse-btn');
+    const tablesInfo = dialog.querySelector('.sqp-sqlite-tables-info');
+    const conflictWarning = dialog.querySelector('.sqp-table-conflict-warning');
     const mssqlFields = dialog.querySelector('.sqp-mssql-fields');
     const errorEl = dialog.querySelector('.sqp-prompt-error');
     const okBtn = dialog.querySelector('.sqp-prompt-ok');
@@ -1942,14 +1957,59 @@ export class SqlQueryPanel {
     const testStatus = dialog.querySelector('.sqp-test-conn-status');
     const radios = dialog.querySelectorAll('input[name="sqp-db-type"]');
 
+    // State for SQLite file selection
+    let sqliteFilePath = null;
+    let sqliteExistingTables = [];
+
     tableNameInput.focus();
     tableNameInput.select();
 
-    // Toggle MSSQL fields visibility
+    // Check table name against existing tables and show inline warning
+    const checkTableConflict = () => {
+      const name = tableNameInput.value.trim().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1');
+      if (sqliteExistingTables.includes(name)) {
+        conflictWarning.textContent = `Table "${name}" already exists and will be replaced.`;
+        conflictWarning.className = 'sqp-table-conflict-warning sqp-conflict-active';
+      } else {
+        conflictWarning.textContent = '';
+        conflictWarning.className = 'sqp-table-conflict-warning';
+      }
+    };
+
+    tableNameInput.addEventListener('input', checkTableConflict);
+
+    // Browse for SQLite file
+    browseBtn.addEventListener('click', async () => {
+      const filePath = await window.api.pickSQLiteFile();
+      if (!filePath) return;
+
+      sqliteFilePath = filePath;
+      sqlitePathInput.value = filePath;
+      errorEl.textContent = '';
+
+      // Read existing tables
+      const result = await window.api.getSQLiteTables(filePath);
+      if (result.success && result.tables.length > 0) {
+        sqliteExistingTables = result.tables;
+        tablesInfo.textContent = `Existing tables: ${result.tables.join(', ')}`;
+        tablesInfo.className = 'sqp-sqlite-tables-info sqp-tables-info-active';
+      } else {
+        sqliteExistingTables = [];
+        tablesInfo.textContent = result.success ? 'New database (no existing tables).' : '';
+        tablesInfo.className = 'sqp-sqlite-tables-info sqp-tables-info-active';
+      }
+
+      checkTableConflict();
+    });
+
+    // Toggle SQLite/MSSQL fields visibility
     for (const radio of radios) {
       radio.addEventListener('change', () => {
         const isMSSQL = dialog.querySelector('input[name="sqp-db-type"]:checked').value === 'mssql';
+        sqliteFields.style.display = isMSSQL ? 'none' : '';
         mssqlFields.style.display = isMSSQL ? '' : 'none';
+        conflictWarning.textContent = '';
+        conflictWarning.className = 'sqp-table-conflict-warning';
         errorEl.textContent = '';
         testStatus.textContent = '';
         testStatus.className = 'sqp-test-conn-status';
@@ -1986,10 +2046,9 @@ export class SqlQueryPanel {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(); });
 
     // Escape key
-    const onKeydown = (e) => {
-      if (e.key === 'Escape') { cleanup(); }
-    };
-    dialog.addEventListener('keydown', onKeydown);
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') cleanup();
+    });
 
     // Export
     okBtn.addEventListener('click', async () => {
@@ -2010,27 +2069,33 @@ export class SqlQueryPanel {
       try {
         let result;
         if (dbType === 'sqlite') {
-          result = await window.api.exportToSQLite({ tableName, columns, rows });
-          if (result.canceled) {
+          if (!sqliteFilePath) {
+            errorEl.textContent = 'Select a database file first.';
             okBtn.disabled = false;
             okBtn.textContent = 'Export';
             return;
           }
+
+          result = await window.api.exportToSQLite({ filePath: sqliteFilePath, tableName, columns, rows });
+          if (result.success) {
+            this._setStatus(`Exported ${result.rowCount} rows to SQLite table "${tableName}".`);
+            cleanup();
+            return;
+          }
         } else {
           const config = this._getMSSQLConfigFromDialog(dialog);
-          // Save config (without password)
           try { await window.api.saveLastMSSQLConfig(config); } catch { /* ignore */ }
           result = await window.api.exportToMSSQL({ config, tableName, columns, rows });
+          if (result.success) {
+            this._setStatus(`Exported ${result.rowCount} rows to SQL Server table "${tableName}".`);
+            cleanup();
+            return;
+          }
         }
 
-        if (result.success) {
-          this._setStatus(`Exported ${result.rowCount} rows to ${dbType === 'sqlite' ? 'SQLite' : 'SQL Server'} table "${tableName}".`);
-          cleanup();
-        } else {
-          errorEl.textContent = result.error || 'Export failed.';
-          okBtn.disabled = false;
-          okBtn.textContent = 'Export';
-        }
+        errorEl.textContent = result.error || 'Export failed.';
+        okBtn.disabled = false;
+        okBtn.textContent = 'Export';
       } catch (err) {
         errorEl.textContent = err.message || 'Export failed.';
         okBtn.disabled = false;

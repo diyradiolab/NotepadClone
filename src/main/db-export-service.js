@@ -216,4 +216,31 @@ async function testMSSQLConnection(config) {
   }
 }
 
-module.exports = { exportToSQLite, exportToMSSQL, testMSSQLConnection };
+/**
+ * Get existing table names from a SQLite file.
+ * @param {string} filePath - Path to the .db file
+ * @returns {{ success: boolean, tables?: string[], error?: string }}
+ */
+function getSQLiteTables(filePath) {
+  let Database;
+  try {
+    Database = require('better-sqlite3');
+  } catch {
+    return { success: false, error: 'better-sqlite3 is not installed.' };
+  }
+
+  try {
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) {
+      return { success: true, tables: [] };
+    }
+    const db = new Database(filePath, { readonly: true });
+    const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+    db.close();
+    return { success: true, tables: rows.map(r => r.name) };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { exportToSQLite, exportToMSSQL, testMSSQLConnection, getSQLiteTables };

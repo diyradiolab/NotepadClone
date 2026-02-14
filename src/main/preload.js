@@ -168,6 +168,8 @@ contextBridge.exposeInMainWorld('api', {
   onDashboardBrowserLoadFailed: (callback) => ipcRenderer.on('main:dashboard-browser-load-failed', (_e, data) => callback(data)),
 
   // Database Export
+  pickSQLiteFile: () => ipcRenderer.invoke('renderer:pick-sqlite-file'),
+  getSQLiteTables: (filePath) => ipcRenderer.invoke('renderer:get-sqlite-tables', filePath),
   exportToSQLite: (data) => ipcRenderer.invoke('renderer:export-to-sqlite', data),
   exportToMSSQL: (data) => ipcRenderer.invoke('renderer:export-to-mssql', data),
   testMSSQLConnection: (config) => ipcRenderer.invoke('renderer:test-mssql-connection', config),
