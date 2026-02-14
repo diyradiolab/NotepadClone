@@ -427,6 +427,54 @@ ORDER BY d.name, p.title
 
 ---
 
+## Export to Database
+
+The **Export DB** button (enabled after running a query) lets you push query results to an actual database — either a local SQLite file or a remote Microsoft SQL Server.
+
+### SQLite Export
+
+1. Run a query to get results
+2. Click **Export DB**
+3. Select **SQLite** (default)
+4. Enter a table name (defaults to the source filename)
+5. Click **Export** → a save dialog lets you choose the \`.db\` file location
+6. The table is created (or replaced if it exists) with inferred column types
+
+The exported SQLite file can be opened with any SQLite client (DB Browser, DBeaver, \`sqlite3\` CLI, etc.).
+
+### SQL Server Export
+
+1. Run a query to get results
+2. Click **Export DB**
+3. Select **SQL Server**
+4. Enter connection details (server, port, database, username, password)
+5. Check **Trust server certificate** for local/dev servers
+6. Click **Test Connection** to verify credentials
+7. Click **Export** → rows are bulk-inserted into the target table
+
+Connection details (except password) are saved and pre-filled next time.
+
+### Column Type Inference
+
+Column types are automatically inferred from data:
+
+| Data Pattern | SQLite Type | SQL Server Type |
+|-------------|-------------|-----------------|
+| All integers | INTEGER | INT |
+| All numbers | REAL | FLOAT |
+| Mixed/text | TEXT | NVARCHAR(MAX) |
+
+Empty values and nulls are ignored during inference.
+
+### Notes
+
+- The target table is **dropped and re-created** each time — existing data is replaced
+- SQLite uses a single transaction for fast bulk inserts
+- SQL Server uses the native bulk insert API for performance
+- If \`better-sqlite3\` or \`mssql\` packages are not installed, an error message will explain what to install
+
+---
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |

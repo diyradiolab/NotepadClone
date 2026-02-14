@@ -19,6 +19,7 @@ const { readFile, writeFile, readDirectory } = require('./file-service');
 const { LargeFileManager, LARGE_FILE_THRESHOLD } = require('./large-file-service');
 const gitService = require('./git-service');
 const terminalService = require('./terminal-service');
+const dbExportService = require('./db-export-service');
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -944,4 +945,34 @@ ipcMain.on('renderer:terminal-resize', (_event, { cols, rows }) => {
 
 ipcMain.handle('renderer:terminal-kill', async () => {
   terminalService.kill();
+});
+
+// ── Database Export ──
+
+ipcMain.handle('renderer:export-to-sqlite', async (_event, { tableName, columns, rows }) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: 'export.db',
+    filters: [{ name: 'SQLite Database', extensions: ['db', 'sqlite', 'sqlite3'] }],
+  });
+  if (result.canceled) return { success: false, canceled: true };
+  return dbExportService.exportToSQLite(result.filePath, tableName, columns, rows);
+});
+
+ipcMain.handle('renderer:export-to-mssql', async (_event, { config, tableName, columns, rows }) => {
+  return dbExportService.exportToMSSQL(config, tableName, columns, rows);
+});
+
+ipcMain.handle('renderer:test-mssql-connection', async (_event, config) => {
+  return dbExportService.testMSSQLConnection(config);
+});
+
+ipcMain.handle('renderer:get-last-mssql-config', async () => {
+  return store.get('lastMSSQLConfig', null);
+});
+
+ipcMain.handle('renderer:save-last-mssql-config', async (_event, config) => {
+  // Strip password before persisting
+  const safe = { ...config };
+  delete safe.password;
+  store.set('lastMSSQLConfig', safe);
 });

@@ -161,7 +161,8 @@
 
 .sqp-run-btn,
 .sqp-export-btn,
-.sqp-save-results-btn {
+.sqp-save-results-btn,
+.sqp-export-db-btn {
   height: 24px;
   padding: 0 12px;
   border: 1px solid var(--border-secondary);
@@ -175,12 +176,14 @@
 
 .sqp-run-btn:hover,
 .sqp-export-btn:hover,
-.sqp-save-results-btn:hover {
+.sqp-save-results-btn:hover,
+.sqp-export-db-btn:hover {
   background: var(--bg-tertiary);
 }
 
 .sqp-export-btn:disabled,
-.sqp-save-results-btn:disabled {
+.sqp-save-results-btn:disabled,
+.sqp-export-db-btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -788,4 +791,111 @@
 
 .sqp-prompt-ok:hover {
   opacity: 0.9;
+}
+
+/* ── Export DB Dialog ── */
+
+.sqp-export-db-dialog {
+  min-width: 340px;
+}
+
+.sqp-export-db-type {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.sqp-export-db-type label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.sqp-mssql-fields {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.sqp-mssql-fields .sqp-prompt-label {
+  margin-bottom: 6px;
+}
+
+.sqp-mssql-fields .sqp-prompt-input {
+  margin-top: 2px;
+}
+
+.sqp-export-db-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sqp-export-db-row .sqp-prompt-label {
+  flex: 1;
+}
+
+.sqp-export-db-row .sqp-port-label {
+  flex: 0 0 80px;
+}
+
+.sqp-export-db-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 6px 0;
+  cursor: pointer;
+}
+
+.sqp-export-db-test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.sqp-test-conn-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sqp-test-conn-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.sqp-test-conn-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sqp-test-conn-status {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.sqp-test-conn-status.sqp-test-pending {
+  color: var(--text-muted);
+}
+
+.sqp-test-conn-status.sqp-test-success {
+  color: #4caf50;
+}
+
+.sqp-test-conn-status.sqp-test-error {
+  color: var(--sql-error);
 }

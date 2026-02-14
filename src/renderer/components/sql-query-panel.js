@@ -100,6 +100,7 @@ export class SqlQueryPanel {
           <button class="sqp-run-btn" id="sqp-run-btn">Run</button>
           <button class="sqp-export-btn" id="sqp-export-btn" title="Export results to new tab" disabled>Export</button>
           <button class="sqp-save-results-btn" id="sqp-save-results-btn" title="Save last query results as a named table" disabled>Save Results</button>
+          <button class="sqp-export-db-btn" id="sqp-export-db-btn" title="Export results to a database" disabled>Export DB</button>
         </div>
       </div>
       <div class="sqp-status" id="sqp-status">Enter a SQL query and click Run (Ctrl+Enter).</div>
@@ -110,6 +111,7 @@ export class SqlQueryPanel {
     this.container.querySelector('#sqp-run-btn').addEventListener('click', () => this._executeQuery());
     this.container.querySelector('#sqp-export-btn').addEventListener('click', () => this._exportResults());
     this.container.querySelector('#sqp-save-results-btn').addEventListener('click', () => this._saveResultsAsTable());
+    this.container.querySelector('#sqp-export-db-btn').addEventListener('click', () => this._showExportDBDialog());
 
     const delimSelect = this.container.querySelector('#sqp-delimiter');
     const customInput = this.container.querySelector('#sqp-custom-regex');
@@ -1667,6 +1669,7 @@ export class SqlQueryPanel {
       this.lastResults = null;
       this.container.querySelector('#sqp-export-btn').disabled = true;
       this.container.querySelector('#sqp-save-results-btn').disabled = true;
+      this.container.querySelector('#sqp-export-db-btn').disabled = true;
       return;
     }
 
@@ -1679,6 +1682,7 @@ export class SqlQueryPanel {
     this.lastQuery = this.container.querySelector('#sqp-query').value.trim();
     this.container.querySelector('#sqp-export-btn').disabled = false;
     this.container.querySelector('#sqp-save-results-btn').disabled = false;
+    this.container.querySelector('#sqp-export-db-btn').disabled = false;
   }
 
   // ── Render results table ──
@@ -1858,6 +1862,192 @@ export class SqlQueryPanel {
     this.savedTables.set(name, { data: this.lastResults, columns: this.lastColumns });
     this._updateTablesRef(this._lastParsedTables);
     this._setStatus(`Saved "${name}" (${this.lastResults.length} rows).`);
+  }
+
+  // ── Export to Database Dialog ──
+
+  async _showExportDBDialog() {
+    if (!this.lastResults || this.lastResults.length === 0) return;
+
+    // Load last MSSQL config
+    let lastConfig = null;
+    try { lastConfig = await window.api.getLastMSSQLConfig(); } catch { /* ignore */ }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sqp-prompt-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'sqp-prompt-dialog sqp-export-db-dialog';
+
+    const defaultTable = (this.lastSourceName || 'results')
+      .replace(/\.[^.]+$/, '')
+      .replace(/[^a-zA-Z0-9_]/g, '_')
+      .replace(/^(\d)/, '_$1') || 'results';
+
+    dialog.innerHTML = `
+      <div class="sqp-prompt-title">Export to Database</div>
+
+      <div class="sqp-export-db-type">
+        <label><input type="radio" name="sqp-db-type" value="sqlite" checked> SQLite</label>
+        <label><input type="radio" name="sqp-db-type" value="mssql"> SQL Server</label>
+      </div>
+
+      <label class="sqp-prompt-label">Table name:</label>
+      <input type="text" class="sqp-prompt-input sqp-export-table-name" value="${defaultTable}" />
+
+      <div class="sqp-mssql-fields" style="display:none">
+        <div class="sqp-export-db-row">
+          <label class="sqp-prompt-label">Server:
+            <input type="text" class="sqp-prompt-input sqp-mssql-server" value="${lastConfig?.server || 'localhost'}" />
+          </label>
+          <label class="sqp-prompt-label sqp-port-label">Port:
+            <input type="text" class="sqp-prompt-input sqp-mssql-port" value="${lastConfig?.port || '1433'}" />
+          </label>
+        </div>
+        <label class="sqp-prompt-label">Database:
+          <input type="text" class="sqp-prompt-input sqp-mssql-database" value="${lastConfig?.database || ''}" />
+        </label>
+        <label class="sqp-prompt-label">Username:
+          <input type="text" class="sqp-prompt-input sqp-mssql-user" value="${lastConfig?.user || 'sa'}" />
+        </label>
+        <label class="sqp-prompt-label">Password:
+          <input type="password" class="sqp-prompt-input sqp-mssql-password" value="" />
+        </label>
+        <label class="sqp-export-db-checkbox">
+          <input type="checkbox" class="sqp-mssql-trust" ${lastConfig?.trustServerCertificate !== false ? 'checked' : ''}>
+          Trust server certificate
+        </label>
+        <div class="sqp-export-db-test-row">
+          <button class="sqp-test-conn-btn">Test Connection</button>
+          <span class="sqp-test-conn-status"></span>
+        </div>
+      </div>
+
+      <div class="sqp-prompt-error"></div>
+      <div class="sqp-prompt-buttons">
+        <button class="sqp-prompt-cancel">Cancel</button>
+        <button class="sqp-prompt-ok">Export</button>
+      </div>
+    `;
+
+    overlay.appendChild(dialog);
+    this.container.appendChild(overlay);
+
+    const tableNameInput = dialog.querySelector('.sqp-export-table-name');
+    const mssqlFields = dialog.querySelector('.sqp-mssql-fields');
+    const errorEl = dialog.querySelector('.sqp-prompt-error');
+    const okBtn = dialog.querySelector('.sqp-prompt-ok');
+    const cancelBtn = dialog.querySelector('.sqp-prompt-cancel');
+    const testBtn = dialog.querySelector('.sqp-test-conn-btn');
+    const testStatus = dialog.querySelector('.sqp-test-conn-status');
+    const radios = dialog.querySelectorAll('input[name="sqp-db-type"]');
+
+    tableNameInput.focus();
+    tableNameInput.select();
+
+    // Toggle MSSQL fields visibility
+    for (const radio of radios) {
+      radio.addEventListener('change', () => {
+        const isMSSQL = dialog.querySelector('input[name="sqp-db-type"]:checked').value === 'mssql';
+        mssqlFields.style.display = isMSSQL ? '' : 'none';
+        errorEl.textContent = '';
+        testStatus.textContent = '';
+        testStatus.className = 'sqp-test-conn-status';
+      });
+    }
+
+    // Test Connection
+    testBtn.addEventListener('click', async () => {
+      testStatus.textContent = 'Connecting...';
+      testStatus.className = 'sqp-test-conn-status sqp-test-pending';
+      testBtn.disabled = true;
+
+      const config = this._getMSSQLConfigFromDialog(dialog);
+      try {
+        const result = await window.api.testMSSQLConnection(config);
+        if (result.success) {
+          testStatus.textContent = 'Connected';
+          testStatus.className = 'sqp-test-conn-status sqp-test-success';
+        } else {
+          testStatus.textContent = result.error || 'Failed';
+          testStatus.className = 'sqp-test-conn-status sqp-test-error';
+        }
+      } catch (err) {
+        testStatus.textContent = err.message || 'Failed';
+        testStatus.className = 'sqp-test-conn-status sqp-test-error';
+      }
+      testBtn.disabled = false;
+    });
+
+    const cleanup = () => overlay.remove();
+
+    // Cancel
+    cancelBtn.addEventListener('click', cleanup);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(); });
+
+    // Escape key
+    const onKeydown = (e) => {
+      if (e.key === 'Escape') { cleanup(); }
+    };
+    dialog.addEventListener('keydown', onKeydown);
+
+    // Export
+    okBtn.addEventListener('click', async () => {
+      const tableName = tableNameInput.value.trim().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1');
+      if (!tableName) {
+        errorEl.textContent = 'Table name cannot be empty.';
+        return;
+      }
+
+      const dbType = dialog.querySelector('input[name="sqp-db-type"]:checked').value;
+      errorEl.textContent = '';
+      okBtn.disabled = true;
+      okBtn.textContent = 'Exporting...';
+
+      const columns = this.lastColumns;
+      const rows = this.lastResults;
+
+      try {
+        let result;
+        if (dbType === 'sqlite') {
+          result = await window.api.exportToSQLite({ tableName, columns, rows });
+          if (result.canceled) {
+            okBtn.disabled = false;
+            okBtn.textContent = 'Export';
+            return;
+          }
+        } else {
+          const config = this._getMSSQLConfigFromDialog(dialog);
+          // Save config (without password)
+          try { await window.api.saveLastMSSQLConfig(config); } catch { /* ignore */ }
+          result = await window.api.exportToMSSQL({ config, tableName, columns, rows });
+        }
+
+        if (result.success) {
+          this._setStatus(`Exported ${result.rowCount} rows to ${dbType === 'sqlite' ? 'SQLite' : 'SQL Server'} table "${tableName}".`);
+          cleanup();
+        } else {
+          errorEl.textContent = result.error || 'Export failed.';
+          okBtn.disabled = false;
+          okBtn.textContent = 'Export';
+        }
+      } catch (err) {
+        errorEl.textContent = err.message || 'Export failed.';
+        okBtn.disabled = false;
+        okBtn.textContent = 'Export';
+      }
+    });
+  }
+
+  _getMSSQLConfigFromDialog(dialog) {
+    return {
+      server: dialog.querySelector('.sqp-mssql-server').value.trim(),
+      port: dialog.querySelector('.sqp-mssql-port').value.trim(),
+      database: dialog.querySelector('.sqp-mssql-database').value.trim(),
+      user: dialog.querySelector('.sqp-mssql-user').value.trim(),
+      password: dialog.querySelector('.sqp-mssql-password').value,
+      trustServerCertificate: dialog.querySelector('.sqp-mssql-trust').checked,
+    };
   }
 
   // ── Status ──

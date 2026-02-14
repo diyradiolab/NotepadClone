@@ -167,6 +167,13 @@ contextBridge.exposeInMainWorld('api', {
   onDashboardBrowserTitle: (callback) => ipcRenderer.on('main:dashboard-browser-title', (_e, data) => callback(data)),
   onDashboardBrowserLoadFailed: (callback) => ipcRenderer.on('main:dashboard-browser-load-failed', (_e, data) => callback(data)),
 
+  // Database Export
+  exportToSQLite: (data) => ipcRenderer.invoke('renderer:export-to-sqlite', data),
+  exportToMSSQL: (data) => ipcRenderer.invoke('renderer:export-to-mssql', data),
+  testMSSQLConnection: (config) => ipcRenderer.invoke('renderer:test-mssql-connection', config),
+  getLastMSSQLConfig: () => ipcRenderer.invoke('renderer:get-last-mssql-config'),
+  saveLastMSSQLConfig: (config) => ipcRenderer.invoke('renderer:save-last-mssql-config', config),
+
   // Terminal
   terminalCreate: (options) => ipcRenderer.invoke('renderer:terminal-create', options),
   terminalWrite: (data) => ipcRenderer.send('renderer:terminal-write', data),
