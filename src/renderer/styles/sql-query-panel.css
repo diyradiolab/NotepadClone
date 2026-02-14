@@ -160,7 +160,8 @@
 }
 
 .sqp-run-btn,
-.sqp-export-btn {
+.sqp-export-btn,
+.sqp-save-results-btn {
   height: 24px;
   padding: 0 12px;
   border: 1px solid var(--border-secondary);
@@ -173,13 +174,42 @@
 }
 
 .sqp-run-btn:hover,
-.sqp-export-btn:hover {
+.sqp-export-btn:hover,
+.sqp-save-results-btn:hover {
   background: var(--bg-tertiary);
 }
 
-.sqp-export-btn:disabled {
+.sqp-export-btn:disabled,
+.sqp-save-results-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Saved table chips (blue accent) */
+.sqp-table-chip.sqp-saved-chip {
+  background: #1a3a5c;
+  border-color: #2a6496;
+  color: #b8d4f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sqp-table-chip.sqp-saved-chip:hover {
+  background: #1e4a70;
+  border-color: #3a7cc6;
+}
+
+.sqp-saved-chip-delete {
+  font-size: 13px;
+  line-height: 1;
+  color: #8ab4d8;
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+.sqp-saved-chip-delete:hover {
+  color: #ff6b6b;
 }
 
 .sqp-status {
@@ -666,4 +696,96 @@
 .sqp-builder.sqp-builder-collapsed .sqp-join-section,
 .sqp-builder.sqp-builder-collapsed .sqp-having-section {
   display: none;
+}
+
+/* ── Save Table Prompt Dialog ── */
+
+.sqp-prompt-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.sqp-prompt-dialog {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 16px;
+  min-width: 280px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.sqp-prompt-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.sqp-prompt-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sqp-prompt-input {
+  width: 100%;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sqp-prompt-input:focus {
+  border-color: var(--input-border-focus);
+}
+
+.sqp-prompt-error {
+  font-size: 11px;
+  color: var(--sql-error);
+  min-height: 16px;
+  margin-top: 4px;
+}
+
+.sqp-prompt-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.sqp-prompt-buttons button {
+  height: 26px;
+  padding: 0 14px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sqp-prompt-buttons button:hover {
+  background: var(--bg-tertiary);
+}
+
+.sqp-prompt-ok {
+  background: var(--input-border-focus) !important;
+  color: #ffffff !important;
+  border-color: var(--input-border-focus) !important;
+}
+
+.sqp-prompt-ok:hover {
+  opacity: 0.9;
 }

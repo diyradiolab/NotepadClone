@@ -245,6 +245,56 @@ FROM ? AS t1 JOIN ? AS t2 ON t1.department = t2.department
 
 ---
 
+## Saved Tables
+
+You can save query results as **named tables** that persist across queries until you close the app. This lets you build up a set of tables to query across.
+
+### Save Results
+Click **Save Results** (enabled after running a query) to save the last query's result set as a named table. You'll be prompted for a table name (alphanumeric and underscores only). If a table with that name already exists, you'll be asked to confirm before overwriting.
+
+### Using Saved Tables
+
+Saved tables appear as **blue chips** in the tables bar. Click a chip to insert a \`SELECT * FROM [tableName] LIMIT 100\` query. Click the **×** on a chip to remove it.
+
+Saved tables are available in any query — use them just like multi-table JSON tables:
+
+\`\`\`sql
+SELECT * FROM [my_table] WHERE status = 'active'
+\`\`\`
+
+**Join a saved table with the active tab:**
+\`\`\`sql
+SELECT d.name, s.category
+FROM data d
+JOIN [categories] s ON d.type = s.type
+\`\`\`
+
+**Join two saved tables:**
+\`\`\`sql
+SELECT o.order_id, c.name
+FROM [orders] o
+JOIN [customers] c ON o.customer_id = c.id
+\`\`\`
+
+### Workflow Example
+
+1. Open \`employees.csv\` → run \`SELECT * FROM data\` → click **Save Results** → name it \`employees\`
+2. Switch to \`departments.csv\` → run \`SELECT * FROM data\` → click **Save Results** → name it \`departments\`
+3. Now query across both saved tables:
+\`\`\`sql
+SELECT e.name, e.salary, d.budget
+FROM [employees] e
+JOIN [departments] d ON e.department = d.department
+WHERE e.salary > 80000
+\`\`\`
+4. Save that result: click **Save Results** → name it \`high_earners\`
+5. Query the saved result:
+\`\`\`sql
+SELECT department, COUNT(*) AS count FROM [high_earners] GROUP BY department
+\`\`\`
+
+---
+
 ## Writing SQL Directly
 
 You can always type SQL directly in the textarea instead of using the builder.

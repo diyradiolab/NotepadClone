@@ -21,6 +21,7 @@ export class SqlQueryPanel {
     this.builderColumns = [];
     this.advancedMode = false;
     this.joinData = []; // [{tabId, joinType, leftCol, rightCol, data, columns}]
+    this.savedTables = new Map(); // name → { data: [...], columns: [...] }
     this._render();
   }
 
@@ -98,6 +99,7 @@ export class SqlQueryPanel {
         <div class="sqp-btn-group">
           <button class="sqp-run-btn" id="sqp-run-btn">Run</button>
           <button class="sqp-export-btn" id="sqp-export-btn" title="Export results to new tab" disabled>Export</button>
+          <button class="sqp-save-results-btn" id="sqp-save-results-btn" title="Save last query results as a named table" disabled>Save Results</button>
         </div>
       </div>
       <div class="sqp-status" id="sqp-status">Enter a SQL query and click Run (Ctrl+Enter).</div>
@@ -107,6 +109,7 @@ export class SqlQueryPanel {
     this.container.querySelector('.sqp-close-btn').addEventListener('click', () => this.hide());
     this.container.querySelector('#sqp-run-btn').addEventListener('click', () => this._executeQuery());
     this.container.querySelector('#sqp-export-btn').addEventListener('click', () => this._exportResults());
+    this.container.querySelector('#sqp-save-results-btn').addEventListener('click', () => this._saveResultsAsTable());
 
     const delimSelect = this.container.querySelector('#sqp-delimiter');
     const customInput = this.container.querySelector('#sqp-custom-regex');
@@ -140,8 +143,21 @@ export class SqlQueryPanel {
       }
     });
 
-    // Delegated click on tables reference bar — chip clicks insert SELECT query
+    // Delegated click on tables reference bar — chip clicks insert SELECT query, × deletes saved table
     this.container.querySelector('#sqp-tables-ref').addEventListener('click', (e) => {
+      // Handle delete button on saved table chips
+      const deleteBtn = e.target.closest('.sqp-saved-chip-delete');
+      if (deleteBtn) {
+        const chip = deleteBtn.closest('.sqp-table-chip');
+        const tableName = chip && chip.dataset.tableName;
+        if (tableName) {
+          this.savedTables.delete(tableName);
+          this._updateTablesRef(this._lastParsedTables);
+          this._setStatus(`Removed saved table "${tableName}".`);
+        }
+        return;
+      }
+
       const chip = e.target.closest('.sqp-table-chip');
       if (!chip) return;
       const tableName = chip.dataset.tableName;
@@ -756,7 +772,10 @@ export class SqlQueryPanel {
 
   _updateTablesRef(tables) {
     const ref = this.container.querySelector('#sqp-tables-ref');
-    if (!tables || Object.keys(tables).length <= 1) {
+    const hasMultiTables = tables && Object.keys(tables).length > 1;
+    const hasSavedTables = this.savedTables.size > 0;
+
+    if (!hasMultiTables && !hasSavedTables) {
       ref.style.display = 'none';
       ref.innerHTML = '';
       return;
@@ -765,12 +784,35 @@ export class SqlQueryPanel {
     ref.style.display = '';
     ref.innerHTML = '<span class="sqp-tables-label">Tables:</span>';
 
-    for (const [name, tbl] of Object.entries(tables)) {
+    // Multi-table JSON chips
+    if (hasMultiTables) {
+      for (const [name, tbl] of Object.entries(tables)) {
+        const chip = document.createElement('button');
+        chip.className = 'sqp-table-chip';
+        chip.textContent = `${name} (${tbl.data.length})`;
+        chip.title = tbl.columns.join(', ');
+        chip.dataset.tableName = name;
+        ref.appendChild(chip);
+      }
+    }
+
+    // Saved table chips (blue style + delete button)
+    for (const [name, tbl] of this.savedTables) {
       const chip = document.createElement('button');
-      chip.className = 'sqp-table-chip';
-      chip.textContent = `${name} (${tbl.data.length})`;
+      chip.className = 'sqp-table-chip sqp-saved-chip';
       chip.title = tbl.columns.join(', ');
       chip.dataset.tableName = name;
+
+      const label = document.createElement('span');
+      label.textContent = `${name} (${tbl.data.length})`;
+      chip.appendChild(label);
+
+      const del = document.createElement('span');
+      del.className = 'sqp-saved-chip-delete';
+      del.textContent = '\u00D7';
+      del.title = `Remove "${name}"`;
+      chip.appendChild(del);
+
       ref.appendChild(chip);
     }
   }
@@ -1543,6 +1585,14 @@ export class SqlQueryPanel {
 
     const isMultiTable = parsed.tables && Object.keys(parsed.tables).length > 1;
 
+    // Register saved tables in alasql before query
+    const savedTableNames = [];
+    for (const [name, tbl] of this.savedTables) {
+      savedTableNames.push(name);
+      alasql(`CREATE TABLE IF NOT EXISTS [${name}]`);
+      alasql.tables[name].data = tbl.data;
+    }
+
     const t0 = performance.now();
     let results;
 
@@ -1560,6 +1610,9 @@ export class SqlQueryPanel {
         return;
       } finally {
         for (const name of tableNames) {
+          try { alasql(`DROP TABLE IF EXISTS [${name}]`); } catch { /* ignore */ }
+        }
+        for (const name of savedTableNames) {
           try { alasql(`DROP TABLE IF EXISTS [${name}]`); } catch { /* ignore */ }
         }
       }
@@ -1580,6 +1633,7 @@ export class SqlQueryPanel {
           } else if (join.tabId && (!join.data)) {
             // Joined tab has no data — check if tab still exists
             const jTab = this.tabManager.getTab(join.tabId);
+            this._dropSavedAlasqlTables(savedTableNames);
             if (!jTab) {
               this._setStatus('Error: A joined tab has been closed.', true);
               return;
@@ -1598,6 +1652,10 @@ export class SqlQueryPanel {
       } catch (err) {
         this._setStatus(`Error: ${err.message}`, true);
         return;
+      } finally {
+        for (const name of savedTableNames) {
+          try { alasql(`DROP TABLE IF EXISTS [${name}]`); } catch { /* ignore */ }
+        }
       }
     }
 
@@ -1608,6 +1666,7 @@ export class SqlQueryPanel {
       this.container.querySelector('#sqp-results').innerHTML = '';
       this.lastResults = null;
       this.container.querySelector('#sqp-export-btn').disabled = true;
+      this.container.querySelector('#sqp-save-results-btn').disabled = true;
       return;
     }
 
@@ -1619,6 +1678,7 @@ export class SqlQueryPanel {
     this.lastSourceName = tab.title || 'untitled';
     this.lastQuery = this.container.querySelector('#sqp-query').value.trim();
     this.container.querySelector('#sqp-export-btn').disabled = false;
+    this.container.querySelector('#sqp-save-results-btn').disabled = false;
   }
 
   // ── Render results table ──
@@ -1704,6 +1764,100 @@ export class SqlQueryPanel {
     this.editorManager.createEditorForTab(tabId, content, exportName);
     this.editorManager.activateTab(tabId);
     this.tabManager.setDirty(tabId, true);
+  }
+
+  _dropSavedAlasqlTables(names) {
+    for (const name of names) {
+      try { alasql(`DROP TABLE IF EXISTS [${name}]`); } catch { /* ignore */ }
+    }
+  }
+
+  // ── Save as Table ──
+
+  /**
+   * Show an inline modal prompt for a table name.
+   * Returns a Promise<string|null>.
+   */
+  _promptTableName(defaultName) {
+    return new Promise((resolve) => {
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'sqp-prompt-overlay';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'sqp-prompt-dialog';
+
+      dialog.innerHTML = `
+        <div class="sqp-prompt-title">Save as Table</div>
+        <label class="sqp-prompt-label">Table name (letters, numbers, underscores):</label>
+        <input type="text" class="sqp-prompt-input" value="${defaultName || ''}" />
+        <div class="sqp-prompt-error"></div>
+        <div class="sqp-prompt-buttons">
+          <button class="sqp-prompt-cancel">Cancel</button>
+          <button class="sqp-prompt-ok">Save</button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      this.container.appendChild(overlay);
+
+      const input = dialog.querySelector('.sqp-prompt-input');
+      const errorEl = dialog.querySelector('.sqp-prompt-error');
+      const okBtn = dialog.querySelector('.sqp-prompt-ok');
+      const cancelBtn = dialog.querySelector('.sqp-prompt-cancel');
+
+      input.focus();
+      input.select();
+
+      const cleanup = () => overlay.remove();
+
+      const submit = () => {
+        const raw = input.value.trim().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1');
+        if (!raw) {
+          errorEl.textContent = 'Name cannot be empty.';
+          return;
+        }
+        if (this.savedTables.has(raw)) {
+          // Show overwrite confirmation
+          errorEl.textContent = '';
+          dialog.innerHTML = `
+            <div class="sqp-prompt-title">Table "${raw}" already exists</div>
+            <div class="sqp-prompt-label">Overwrite it?</div>
+            <div class="sqp-prompt-buttons">
+              <button class="sqp-prompt-cancel">Cancel</button>
+              <button class="sqp-prompt-ok">Overwrite</button>
+            </div>
+          `;
+          dialog.querySelector('.sqp-prompt-cancel').addEventListener('click', () => { cleanup(); resolve(null); });
+          dialog.querySelector('.sqp-prompt-ok').addEventListener('click', () => { cleanup(); resolve(raw); });
+          dialog.querySelector('.sqp-prompt-ok').focus();
+          return;
+        }
+        cleanup();
+        resolve(raw);
+      };
+
+      okBtn.addEventListener('click', submit);
+      cancelBtn.addEventListener('click', () => { cleanup(); resolve(null); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submit();
+        if (e.key === 'Escape') { cleanup(); resolve(null); }
+      });
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) { cleanup(); resolve(null); }
+      });
+    });
+  }
+
+  async _saveResultsAsTable() {
+    if (!this.lastResults || this.lastResults.length === 0) return;
+
+    const name = await this._promptTableName('results');
+    if (!name) return;
+
+    this.savedTables.set(name, { data: this.lastResults, columns: this.lastColumns });
+    this._updateTablesRef(this._lastParsedTables);
+    this._setStatus(`Saved "${name}" (${this.lastResults.length} rows).`);
   }
 
   // ── Status ──
