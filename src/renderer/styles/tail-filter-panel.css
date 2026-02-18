@@ -1,0 +1,162 @@
+/* ── Tail Filter Panel ── */
+.tail-filter-panel {
+  height: 250px;
+  min-height: 150px;
+  max-height: 80vh;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tail-filter-panel.hidden {
+  display: none;
+}
+
+.tfp-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 10;
+}
+
+.tfp-resize-handle:hover,
+.tfp-resize-handle.tfp-dragging {
+  background: var(--input-border-focus);
+  opacity: 0.5;
+}
+
+.tfp-header {
+  padding: 4px 10px;
+}
+
+.tfp-close-btn:hover {
+  background: var(--tab-close-hover-bg);
+  color: white;
+}
+
+/* ── Controls Row ── */
+.tfp-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.tfp-input {
+  flex: 1;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.tfp-input:focus {
+  border-color: var(--input-border-focus);
+}
+
+.tfp-option {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* ── Mode Toggle (Include/Exclude) ── */
+.tfp-mode-bar {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.tfp-mode-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.tfp-mode-btn:first-child {
+  border-radius: 2px 0 0 2px;
+  border-right: none;
+}
+
+.tfp-mode-btn:last-child {
+  border-radius: 0 2px 2px 0;
+}
+
+.tfp-mode-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.tfp-mode-btn.tfp-mode-active {
+  background: var(--input-border-focus);
+  color: #ffffff;
+  border-color: var(--input-border-focus);
+}
+
+/* ── Status ── */
+.tfp-status {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+/* ── Results ── */
+.tfp-results {
+  flex: 1;
+  overflow-y: auto;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.tfp-line {
+  padding: 2px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tfp-line:hover {
+  background: var(--bg-toolbar-hover);
+}
+
+.tfp-line-num {
+  color: var(--text-accent);
+  margin-right: 8px;
+  display: inline-block;
+  min-width: 50px;
+  text-align: right;
+}
+
+.tfp-line-text {
+  white-space: pre;
+}
+
+.tfp-match {
+  background: rgba(255, 200, 0, 0.35);
+  color: inherit;
+  border-radius: 1px;
+}

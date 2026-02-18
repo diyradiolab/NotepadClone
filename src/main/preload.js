@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('main:tail-reset', handler);
   },
   onMenuToggleTail: (callback) => ipcRenderer.on('main:toggle-tail', callback),
+  onMenuToggleTailFilter: (callback) => ipcRenderer.on('main:toggle-tail-filter', callback),
 
   // Recent files
   getRecentFiles: () => ipcRenderer.invoke('renderer:get-recent-files'),

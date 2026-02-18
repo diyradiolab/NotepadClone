@@ -1,8 +1,10 @@
 import './styles/main.css';
 import './styles/notepadpp-theme.css';
+import './styles/tail-filter-panel.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
+import { TailFilterPanel } from './components/tail-filter-panel';
 import { setEditorTheme, updateDefaultOptions } from './editor/monaco-setup';
 import { SettingsService } from './settings-service';
 import { EventBus } from './event-bus';
@@ -71,6 +73,7 @@ const tabBar = document.getElementById('tab-bar');
 const editorManager = new EditorManager(editorContainer);
 const tabManager = new TabManager(tabBar);
 const statusBar = new StatusBar();
+const tailFilterPanel = new TailFilterPanel(document.getElementById('tail-filter'));
 
 
 // ── Plugin Infrastructure ──
@@ -191,9 +194,15 @@ function updateTailIndicator(tabId, active) {
 
 function updateStatusBarTail(active) {
   const el = document.getElementById('status-tail');
-  if (!el) return;
-  el.style.display = active ? '' : 'none';
-  el.textContent = active ? 'Tail: ON' : '';
+  if (el) {
+    el.style.display = active ? '' : 'none';
+    el.textContent = active ? 'Tail: ON' : '';
+  }
+  const btn = document.getElementById('btn-tail-toggle');
+  if (btn) btn.classList.toggle('toolbar-btn-active', active);
+  // Show/hide tail filter button
+  const filterBtn = document.getElementById('btn-tail-filter');
+  if (filterBtn) filterBtn.style.display = active ? '' : 'none';
 }
 
 async function toggleTail() {
@@ -212,6 +221,8 @@ async function toggleTail() {
     editorManager.setReadOnly(tabId, false);
     updateTailIndicator(tabId, false);
     updateStatusBarTail(false);
+    tailFilterPanel.clear();
+    tailFilterPanel.hide();
     statusBar.showMessage('Tail stopped');
   } else {
     // Reload current content before starting
@@ -232,6 +243,14 @@ async function toggleTail() {
     editorManager.scrollToBottom(tabId);
     updateTailIndicator(tabId, true);
     updateStatusBarTail(true);
+
+    // Initialize tail filter panel state
+    const editor = editorManager.getActiveEditor();
+    const lineCount = editor && editor.getModel() ? editor.getModel().getLineCount() : 0;
+    tailFilterPanel.clear();
+    tailFilterPanel.setBaseLineNum(lineCount);
+    tailFilterPanel.setMaxLines(settingsService.get('tail.maxLines') || 10000);
+
     statusBar.showMessage('Tailing file...');
   }
 }
@@ -249,6 +268,8 @@ window.api.onTailData(({ filePath, data }) => {
       }
       // Don't mark as dirty — tailed content is read-only
       tabManager.setDirty(tabId, false);
+      // Feed data to tail filter panel
+      tailFilterPanel.onTailData(data);
       break;
     }
   }
@@ -261,10 +282,28 @@ window.api.onTailReset(({ filePath, data }) => {
       editorManager.setContent(tabId, data);
       editorManager.scrollToBottom(tabId);
       tabManager.setDirty(tabId, false);
+      tailFilterPanel.onTailReset();
       break;
     }
   }
 });
+
+// Tail filter panel — line click scrolls main editor
+tailFilterPanel.onLineClick = (lineNumber) => {
+  const tabId = tabManager.getActiveTabId();
+  if (tabId) {
+    editorManager.revealLine(tabId, lineNumber);
+  }
+};
+
+function toggleTailFilter() {
+  const tabId = tabManager.getActiveTabId();
+  if (!tabId || !tailingTabs.has(tabId)) {
+    statusBar.showMessage('Tail filter requires an active tail session');
+    return;
+  }
+  tailFilterPanel.toggle();
+}
 
 function refreshGitStatus() {
   const gitExports = _getPluginExports('notepadclone-git');
@@ -393,7 +432,12 @@ tabManager.onActivate((tabId) => {
   }
 
   // Update tail status bar indicator for newly activated tab
-  updateStatusBarTail(tailingTabs.has(tabId));
+  const isTailing = tailingTabs.has(tabId);
+  updateStatusBarTail(isTailing);
+  // Hide tail filter panel when switching away from a tailing tab
+  if (!isTailing && tailFilterPanel.isVisible()) {
+    tailFilterPanel.hide();
+  }
 
   refreshGitStatus();
 });
@@ -409,6 +453,8 @@ tabManager.onClose((tabId) => {
     const state = tailingTabs.get(tabId);
     window.api.stopTail(state.filePath);
     tailingTabs.delete(tabId);
+    tailFilterPanel.clear();
+    tailFilterPanel.hide();
   }
 
   // Let viewer registry destroy any active viewer
@@ -913,6 +959,8 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'column-select': toggleColumnSelection(); break;
     case 'sql-query': commandRegistry.execute('sqlQuery.toggle'); break;
     case 'terminal-toggle': commandRegistry.execute('terminal.toggle'); break;
+    case 'tail-toggle': toggleTail(); break;
+    case 'tail-filter-toggle': toggleTailFilter(); break;
     case 'git-init': commandRegistry.execute('git.init'); break;
     case 'git-stage': commandRegistry.execute('git.stageAll'); break;
     case 'git-stage-file': commandRegistry.execute('git.stageFile'); break;
@@ -988,6 +1036,7 @@ window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
 window.api.onMenuNewDashboard(() => commandRegistry.execute('webDashboard.open'));
 window.api.onMenuToggleTail(() => toggleTail());
+window.api.onMenuToggleTailFilter(() => toggleTailFilter());
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
 window.api.onMenuCommandPalette(() => commandRegistry.execute('commandPalette.show'));
 window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));

@@ -277,6 +277,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Shift+Y',
           click: () => mainWindow.webContents.send('main:toggle-tail'),
         },
+        {
+          label: 'Tail Filter',
+          accelerator: 'CmdOrCtrl+Shift+L',
+          click: () => mainWindow.webContents.send('main:toggle-tail-filter'),
+        },
         { type: 'separator' },
         {
           label: 'Options...',
