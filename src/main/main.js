@@ -53,6 +53,9 @@ const OPTIONS_DEFAULTS = {
     autoSaveDelay: 1000,
     largeFileThreshold: 5,
   },
+  tail: {
+    maxLines: 100000,
+  },
 };
 
 const store = new Store({
@@ -78,6 +81,7 @@ let mainWindow = null;
 let currentFilePath = null; // track active file for Share menu
 let isClosing = false; // re-entrancy guard for window close handler
 const fileWatchers = new Map(); // filePath → chokidar watcher
+const tailState = new Map(); // filePath → { watcher, offset, timer }
 
 // Send a message to renderer and wait for a response on a paired channel (with timeout)
 function invokeRenderer(channel, ...args) {
@@ -165,6 +169,12 @@ function createWindow() {
       watcher.close();
     }
     fileWatchers.clear();
+    // Clean up all tail watchers
+    for (const tail of tailState.values()) {
+      if (tail.timer) clearTimeout(tail.timer);
+      tail.watcher.close();
+    }
+    tailState.clear();
     mainWindow = null;
   });
 }
@@ -249,7 +259,7 @@ function watchFile(filePath) {
   });
 
   watcher.on('change', () => {
-    if (mainWindow) {
+    if (mainWindow && !tailState.has(filePath)) {
       mainWindow.webContents.send('main:file-changed', filePath);
     }
   });
@@ -264,6 +274,77 @@ function unwatchFile(filePath) {
     fileWatchers.delete(filePath);
   }
 }
+
+// ── Tail (auto-follow) ──
+
+ipcMain.handle('renderer:start-tail', async (_event, filePath) => {
+  if (tailState.has(filePath)) return { success: true };
+
+  let offset;
+  try {
+    const stats = await fs.promises.stat(filePath);
+    offset = stats.size;
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+
+  const state = { offset, watcher: null, timer: null };
+
+  const watcher = chokidar.watch(filePath, {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+  });
+
+  watcher.on('change', () => {
+    // Throttle: batch rapid writes with 50ms debounce
+    if (state.timer) return;
+    state.timer = setTimeout(async () => {
+      state.timer = null;
+      if (!mainWindow || !tailState.has(filePath)) return;
+
+      try {
+        const stats = await fs.promises.stat(filePath);
+        if (stats.size < state.offset) {
+          // File was truncated/rotated — full re-read
+          state.offset = stats.size;
+          const content = await fs.promises.readFile(filePath, 'utf-8');
+          mainWindow.webContents.send('main:tail-reset', { filePath, data: content });
+          return;
+        }
+        if (stats.size === state.offset) return; // no new data
+
+        // Read only new bytes
+        const chunks = [];
+        const stream = fs.createReadStream(filePath, { start: state.offset, encoding: 'utf-8' });
+        for await (const chunk of stream) {
+          chunks.push(chunk);
+        }
+        const newData = chunks.join('');
+        state.offset = stats.size;
+
+        if (newData) {
+          mainWindow.webContents.send('main:tail-data', { filePath, data: newData });
+        }
+      } catch {
+        // File may have been deleted — stop tailing
+      }
+    }, 50);
+  });
+
+  state.watcher = watcher;
+  tailState.set(filePath, state);
+  return { success: true };
+});
+
+ipcMain.handle('renderer:stop-tail', async (_event, filePath) => {
+  const state = tailState.get(filePath);
+  if (state) {
+    if (state.timer) clearTimeout(state.timer);
+    state.watcher.close();
+    tailState.delete(filePath);
+  }
+  return { success: true };
+});
 
 // ── IPC Handlers ──
 

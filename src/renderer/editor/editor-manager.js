@@ -99,6 +99,10 @@ export class EditorManager {
       editor.restoreViewState(entry.viewState);
     }
 
+    if (entry.readOnly) {
+      editor.updateOptions({ readOnly: true });
+    }
+
     entry.editor = editor;
 
     // Dispose previous model content listener to prevent accumulation
@@ -354,6 +358,59 @@ export class EditorManager {
       this._eolContentDisposable.dispose();
       this._eolContentDisposable = null;
     }
+  }
+
+  appendContent(tabId, text) {
+    const entry = this.editors.get(tabId);
+    if (!entry || !entry.model) return;
+    const model = entry.model;
+    const lastLine = model.getLineCount();
+    const lastCol = model.getLineMaxColumn(lastLine);
+    // Use pushEditOperations for efficient append (no full replace)
+    model.pushEditOperations([], [{
+      range: new monaco.Range(lastLine, lastCol, lastLine, lastCol),
+      text,
+    }], () => null);
+  }
+
+  trimToMaxLines(tabId, maxLines) {
+    const entry = this.editors.get(tabId);
+    if (!entry || !entry.model) return;
+    const model = entry.model;
+    const lineCount = model.getLineCount();
+    if (lineCount <= maxLines) return;
+    const removeCount = lineCount - maxLines;
+    model.pushEditOperations([], [{
+      range: new monaco.Range(1, 1, removeCount + 1, 1),
+      text: '',
+    }], () => null);
+  }
+
+  setReadOnly(tabId, readOnly) {
+    const entry = this.editors.get(tabId);
+    if (!entry) return;
+    entry.readOnly = readOnly;
+    if (entry.editor) {
+      entry.editor.updateOptions({ readOnly });
+    }
+  }
+
+  isAtBottom(tabId) {
+    const entry = this.editors.get(tabId);
+    if (!entry || !entry.editor || !entry.model) return true;
+    const editor = entry.editor;
+    const visibleRanges = editor.getVisibleRanges();
+    if (!visibleRanges.length) return true;
+    const lastVisibleLine = visibleRanges[visibleRanges.length - 1].endLineNumber;
+    const totalLines = entry.model.getLineCount();
+    return lastVisibleLine >= totalLines - 3;
+  }
+
+  scrollToBottom(tabId) {
+    const entry = this.editors.get(tabId);
+    if (!entry || !entry.editor || !entry.model) return;
+    const lastLine = entry.model.getLineCount();
+    entry.editor.revealLine(lastLine);
   }
 
   revealLine(tabId, lineNumber) {

@@ -38,6 +38,12 @@ const SCHEMA = {
       largeFileThreshold: { type: 'number', default: 5, min: 1, max: 100, label: 'Large File Threshold (MB)' },
     },
   },
+  tail: {
+    label: 'Tail',
+    settings: {
+      maxLines: { type: 'number', default: 100000, min: 1000, max: 1000000, label: 'Max Lines (buffer limit)' },
+    },
+  },
 };
 
 export class SettingsService {

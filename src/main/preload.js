@@ -31,6 +31,21 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('main:file-changed', handler);
   },
 
+  // Tail (auto-follow)
+  startTail: (filePath) => ipcRenderer.invoke('renderer:start-tail', filePath),
+  stopTail: (filePath) => ipcRenderer.invoke('renderer:stop-tail', filePath),
+  onTailData: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('main:tail-data', handler);
+    return () => ipcRenderer.removeListener('main:tail-data', handler);
+  },
+  onTailReset: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('main:tail-reset', handler);
+    return () => ipcRenderer.removeListener('main:tail-reset', handler);
+  },
+  onMenuToggleTail: (callback) => ipcRenderer.on('main:toggle-tail', callback),
+
   // Recent files
   getRecentFiles: () => ipcRenderer.invoke('renderer:get-recent-files'),
   clearRecentFiles: () => ipcRenderer.invoke('renderer:clear-recent-files'),

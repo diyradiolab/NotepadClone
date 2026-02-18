@@ -578,6 +578,25 @@ html, body {
   padding-left: 2px;
 }
 
+/* ── Tail Indicator ── */
+
+.tab-tail-indicator {
+  color: #2cbcb0;
+  font-size: 10px;
+  margin-right: 4px;
+  animation: tail-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tail-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+#status-tail {
+  color: #2cbcb0;
+  font-weight: bold;
+}
+
 [data-mode-id] .eol-crlf::after,
 [data-mode-id] .eol-lf::after,
 [data-mode-id] .eol-cr::after {

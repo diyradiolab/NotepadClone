@@ -169,6 +169,103 @@ function applyEditorSettings() {
 let newFileCounter = 1;
 let currentFolderPath = null;
 
+// ── Tail (auto-follow) State ──
+const tailingTabs = new Map(); // tabId → { filePath }
+
+function updateTailIndicator(tabId, active) {
+  const tabEl = document.querySelector(`.tab[data-tab-id="${tabId}"]`);
+  if (!tabEl) return;
+  const existing = tabEl.querySelector('.tab-tail-indicator');
+  if (active && !existing) {
+    const indicator = document.createElement('span');
+    indicator.className = 'tab-tail-indicator';
+    indicator.textContent = '\u25B6';
+    indicator.title = 'Tailing';
+    // Insert before the close button
+    const closeBtn = tabEl.querySelector('.tab-close');
+    tabEl.insertBefore(indicator, closeBtn);
+  } else if (!active && existing) {
+    existing.remove();
+  }
+}
+
+function updateStatusBarTail(active) {
+  const el = document.getElementById('status-tail');
+  if (!el) return;
+  el.style.display = active ? '' : 'none';
+  el.textContent = active ? 'Tail: ON' : '';
+}
+
+async function toggleTail() {
+  const tabId = tabManager.getActiveTabId();
+  if (!tabId) return;
+  const tab = tabManager.getTab(tabId);
+  if (!tab || !tab.filePath) {
+    statusBar.showMessage('Tail requires a saved file');
+    return;
+  }
+
+  if (tailingTabs.has(tabId)) {
+    // Stop tailing
+    await window.api.stopTail(tab.filePath);
+    tailingTabs.delete(tabId);
+    editorManager.setReadOnly(tabId, false);
+    updateTailIndicator(tabId, false);
+    updateStatusBarTail(false);
+    statusBar.showMessage('Tail stopped');
+  } else {
+    // Reload current content before starting
+    const file = await window.api.reloadFile(tab.filePath);
+    if (file) {
+      editorManager.setContent(tabId, file.content);
+      tabManager.setDirty(tabId, false);
+    }
+
+    const result = await window.api.startTail(tab.filePath);
+    if (!result || !result.success) {
+      statusBar.showMessage('Failed to start tail');
+      return;
+    }
+
+    tailingTabs.set(tabId, { filePath: tab.filePath });
+    editorManager.setReadOnly(tabId, true);
+    editorManager.scrollToBottom(tabId);
+    updateTailIndicator(tabId, true);
+    updateStatusBarTail(true);
+    statusBar.showMessage('Tailing file...');
+  }
+}
+
+// Tail data listener — append new content
+window.api.onTailData(({ filePath, data }) => {
+  // Find the tab by filePath
+  for (const [tabId, state] of tailingTabs) {
+    if (state.filePath === filePath) {
+      const wasAtBottom = editorManager.isAtBottom(tabId);
+      editorManager.appendContent(tabId, data);
+      editorManager.trimToMaxLines(tabId, settingsService.get('tail.maxLines'));
+      if (wasAtBottom) {
+        editorManager.scrollToBottom(tabId);
+      }
+      // Don't mark as dirty — tailed content is read-only
+      tabManager.setDirty(tabId, false);
+      break;
+    }
+  }
+});
+
+// Tail reset listener — file was truncated/rotated
+window.api.onTailReset(({ filePath, data }) => {
+  for (const [tabId, state] of tailingTabs) {
+    if (state.filePath === filePath) {
+      editorManager.setContent(tabId, data);
+      editorManager.scrollToBottom(tabId);
+      tabManager.setDirty(tabId, false);
+      break;
+    }
+  }
+});
+
 function refreshGitStatus() {
   const gitExports = _getPluginExports('notepadclone-git');
   if (gitExports) gitExports.refreshGitStatus();
@@ -295,6 +392,9 @@ tabManager.onActivate((tabId) => {
     window.api.notifyActiveFile(tab.filePath || null);
   }
 
+  // Update tail status bar indicator for newly activated tab
+  updateStatusBarTail(tailingTabs.has(tabId));
+
   refreshGitStatus();
 });
 
@@ -302,6 +402,13 @@ tabManager.onClose((tabId) => {
   const tab = tabManager.getTab(tabId);
   if (tab && tab.filePath) {
     window.api.unwatchFile(tab.filePath);
+  }
+
+  // Stop tail if this tab was being tailed
+  if (tailingTabs.has(tabId)) {
+    const state = tailingTabs.get(tabId);
+    window.api.stopTail(state.filePath);
+    tailingTabs.delete(tabId);
   }
 
   // Let viewer registry destroy any active viewer
@@ -761,6 +868,9 @@ window.api.onFileChanged(async (filePath) => {
     const tabId = tabManager.findTabByPath(filePath);
     if (!tabId) return;
 
+    // Skip tailed files — handled by tail listeners
+    if (tailingTabs.has(tabId)) return;
+
     const tab = tabManager.getTab(tabId);
     if (tab.isLargeFile) return;
 
@@ -877,6 +987,7 @@ window.api.onMenuNewSpreadsheet(() => commandRegistry.execute('spreadsheet.new')
 window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
 window.api.onMenuNewDashboard(() => commandRegistry.execute('webDashboard.open'));
+window.api.onMenuToggleTail(() => toggleTail());
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
 window.api.onMenuCommandPalette(() => commandRegistry.execute('commandPalette.show'));
 window.api.onMenuPluginManager(() => commandRegistry.execute('pluginManager.show'));

@@ -272,6 +272,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'Ctrl+`',
           click: () => mainWindow.webContents.send('main:toggle-terminal'),
         },
+        {
+          label: 'Tail File (Auto-scroll)',
+          accelerator: 'CmdOrCtrl+Shift+Y',
+          click: () => mainWindow.webContents.send('main:toggle-tail'),
+        },
         { type: 'separator' },
         {
           label: 'Options...',
