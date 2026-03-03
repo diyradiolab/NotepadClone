@@ -230,6 +230,12 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Alt+S',
           click: () => mainWindow.webContents.send('main:snippets'),
         },
+        { type: 'separator' },
+        {
+          label: 'HTTP Client',
+          accelerator: 'CmdOrCtrl+Alt+H',
+          click: () => mainWindow.webContents.send('main:http-client'),
+        },
       ],
     },
 

@@ -1,0 +1,619 @@
+/* ── HTTP Client Panel ── */
+
+.hcp-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: row;
+  background: var(--bg-primary);
+  z-index: 5;
+  font-family: 'Segoe UI', -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.hcp-container.hidden {
+  display: none;
+}
+
+/* ── Sidebar ── */
+
+.hcp-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.hcp-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.hcp-sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.hcp-sidebar-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.hcp-sidebar-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.hcp-sidebar-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.hcp-sidebar-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.hcp-sidebar-handle:hover {
+  background: var(--accent-color, #007acc);
+}
+
+/* ── Tree Nodes ── */
+
+.hcp-tree-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  gap: 6px;
+  min-height: 26px;
+  user-select: none;
+}
+
+.hcp-tree-row:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.06));
+}
+
+.hcp-tree-active {
+  background: var(--selection-bg, rgba(0, 122, 204, 0.2)) !important;
+}
+
+.hcp-tree-arrow {
+  font-size: 9px;
+  width: 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.hcp-tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.hcp-tree-method {
+  font-size: 10px;
+  font-weight: 700;
+  width: 42px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.hcp-tree-actions {
+  display: none;
+  gap: 2px;
+}
+
+.hcp-tree-row:hover .hcp-tree-actions {
+  display: flex;
+}
+
+.hcp-tree-children {
+  padding-left: 12px;
+}
+
+.hcp-tree-collection-row {
+  font-weight: 600;
+}
+
+/* ── Main Area ── */
+
+.hcp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── Request Area ── */
+
+.hcp-request-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 100px;
+}
+
+.hcp-url-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.hcp-method-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: #61affe;
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 85px;
+}
+
+.hcp-method-select option {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.hcp-url-input {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.hcp-url-input:focus {
+  outline: none;
+  border-color: var(--accent-color, #007acc);
+}
+
+/* ── Buttons ── */
+
+.hcp-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hcp-btn:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+}
+
+.hcp-btn-send {
+  background: #49cc90;
+  color: #1a1a2e;
+  border-color: #49cc90;
+  font-weight: 600;
+}
+
+.hcp-btn-send:hover {
+  background: #3db87e;
+}
+
+.hcp-btn-send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hcp-btn-save {
+  background: var(--bg-secondary);
+}
+
+.hcp-btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.hcp-btn-icon:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary);
+}
+
+.hcp-btn-tiny {
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+.hcp-btn-danger:hover {
+  color: #f93e3e;
+}
+
+/* ── Tabs ── */
+
+.hcp-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.hcp-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hcp-tab:hover {
+  color: var(--text-primary);
+}
+
+.hcp-tab-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-color, #007acc);
+}
+
+.hcp-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+/* ── KV Table ── */
+
+.hcp-kv-table {
+  width: 100%;
+}
+
+.hcp-kv-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.hcp-kv-header {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.hcp-kv-check {
+  width: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent-color, #007acc);
+}
+
+.hcp-kv-cell {
+  flex: 1;
+}
+
+.hcp-kv-key {
+  flex: 1;
+}
+
+.hcp-kv-val {
+  flex: 1.5;
+}
+
+.hcp-kv-del {
+  width: 24px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.hcp-kv-row input[type="text"] {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 4px 6px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hcp-kv-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent-color, #007acc);
+}
+
+/* ── Body Tab ── */
+
+.hcp-body-type-selector,
+.hcp-auth-type-selector {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+
+.hcp-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.hcp-radio-label input[type="radio"] {
+  accent-color: var(--accent-color, #007acc);
+}
+
+.hcp-body-editor {
+  width: 100%;
+  min-height: 120px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.hcp-body-editor:focus {
+  outline: none;
+  border-color: var(--accent-color, #007acc);
+}
+
+.hcp-body-none {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* ── Auth Fields ── */
+
+.hcp-auth-fields {
+  padding: 4px 0;
+}
+
+.hcp-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 8px 0 4px;
+}
+
+.hcp-input {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.hcp-input:focus {
+  outline: none;
+  border-color: var(--accent-color, #007acc);
+}
+
+select.hcp-input {
+  cursor: pointer;
+  max-width: 200px;
+}
+
+/* ── Split Handle ── */
+
+.hcp-split-handle {
+  height: 4px;
+  cursor: row-resize;
+  background: transparent;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.hcp-split-handle:hover {
+  background: var(--accent-color, #007acc);
+}
+
+/* ── Response Area ── */
+
+.hcp-response-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 80px;
+}
+
+.hcp-response-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.hcp-status-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.hcp-status-badge {
+  padding: 3px 10px;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hcp-status-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.hcp-copy-btn {
+  margin-left: auto;
+}
+
+.hcp-response-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.hcp-response-body {
+  margin: 0;
+  padding: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-primary);
+}
+
+/* JSON syntax highlighting */
+.hcp-json-key { color: #9cdcfe; }
+.hcp-json-string { color: #ce9178; }
+.hcp-json-number { color: #b5cea8; }
+.hcp-json-bool { color: #569cd6; }
+.hcp-json-null { color: #569cd6; }
+
+/* ── Response Headers ── */
+
+.hcp-response-headers {
+  padding: 8px 12px;
+}
+
+.hcp-resp-header-row {
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.hcp-resp-header-key {
+  font-weight: 600;
+  color: #9cdcfe;
+  min-width: 180px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.hcp-resp-header-val {
+  color: var(--text-primary);
+  word-break: break-all;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ── Dialog Overlay ── */
+
+.hcp-dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.hcp-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 16px 20px;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.hcp-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.hcp-dialog-input {
+  margin-bottom: 12px;
+}
+
+.hcp-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hcp-dialog-cancel {
+  background: transparent;
+}
+
+/* ── Select Dialog ── */
+
+.hcp-select-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+}
+
+.hcp-select-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.hcp-select-option:hover {
+  background: var(--selection-bg, rgba(0, 122, 204, 0.2));
+}

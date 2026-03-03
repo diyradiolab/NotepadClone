@@ -66,6 +66,7 @@ const store = new Store({
     theme: 'system',
     snippets: [],
     dashboardLinks: [],
+    httpClientCollections: { collections: [], version: 1 },
     options: OPTIONS_DEFAULTS,
   },
 });
@@ -1064,4 +1065,114 @@ ipcMain.handle('renderer:save-last-mssql-config', async (_event, config) => {
   const safe = { ...config };
   delete safe.password;
   store.set('lastMSSQLConfig', safe);
+});
+
+// ── HTTP Client ──
+
+ipcMain.handle('renderer:http-client-get-collections', async () => {
+  return store.get('httpClientCollections', { collections: [], version: 1 });
+});
+
+ipcMain.handle('renderer:http-client-save-collections', async (_event, data) => {
+  store.set('httpClientCollections', data);
+});
+
+ipcMain.handle('renderer:http-client-send-request', async (_event, { method, url, headers, body }) => {
+  const http = require('http');
+  const https = require('https');
+
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      resolve({ status: 0, statusText: 'Invalid URL', body: `Invalid URL: ${url}`, headers: {}, time: 0, size: 0 });
+      return;
+    }
+
+    const isHttps = parsedUrl.protocol === 'https:';
+    const lib = isHttps ? https : http;
+
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: method,
+      headers: headers || {},
+      timeout: 30000,
+    };
+
+    const req = lib.request(options, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+        const elapsed = Date.now() - startTime;
+        const respHeaders = {};
+        Object.entries(res.headers).forEach(([k, v]) => { respHeaders[k] = v; });
+        resolve({
+          status: res.statusCode,
+          statusText: res.statusMessage || '',
+          body: buffer.toString('utf-8'),
+          raw: buffer.toString('utf-8'),
+          headers: respHeaders,
+          time: elapsed,
+          size: buffer.length,
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      resolve({
+        status: 0,
+        statusText: 'Network Error',
+        body: err.message,
+        headers: {},
+        time: Date.now() - startTime,
+        size: 0,
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        status: 0,
+        statusText: 'Timeout',
+        body: 'Request timed out after 30 seconds',
+        headers: {},
+        time: Date.now() - startTime,
+        size: 0,
+      });
+    });
+
+    if (body && method !== 'GET' && method !== 'HEAD') {
+      req.write(body);
+    }
+    req.end();
+  });
+});
+
+ipcMain.handle('renderer:http-client-export-collection', async (_event, data) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: 'http-collection.json',
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return { success: false };
+  await fs.promises.writeFile(result.filePath, JSON.stringify(data, null, 2), 'utf-8');
+  return { success: true, filePath: result.filePath };
+});
+
+ipcMain.handle('renderer:http-client-import-collection', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'JSON Files', extensions: ['json'] }],
+  });
+  if (result.canceled) return null;
+  try {
+    const content = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
 });

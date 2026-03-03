@@ -183,6 +183,14 @@ contextBridge.exposeInMainWorld('api', {
   onDashboardBrowserTitle: (callback) => ipcRenderer.on('main:dashboard-browser-title', (_e, data) => callback(data)),
   onDashboardBrowserLoadFailed: (callback) => ipcRenderer.on('main:dashboard-browser-load-failed', (_e, data) => callback(data)),
 
+  // HTTP Client
+  httpClientGetCollections: () => ipcRenderer.invoke('renderer:http-client-get-collections'),
+  httpClientSaveCollections: (data) => ipcRenderer.invoke('renderer:http-client-save-collections', data),
+  httpClientSendRequest: (options) => ipcRenderer.invoke('renderer:http-client-send-request', options),
+  httpClientExportCollection: (data) => ipcRenderer.invoke('renderer:http-client-export-collection', data),
+  httpClientImportCollection: () => ipcRenderer.invoke('renderer:http-client-import-collection'),
+  onMenuHttpClient: (callback) => ipcRenderer.on('main:http-client', callback),
+
   // Database Export
   pickSQLiteFile: () => ipcRenderer.invoke('renderer:pick-sqlite-file'),
   getSQLiteTables: (filePath) => ipcRenderer.invoke('renderer:get-sqlite-tables', filePath),
