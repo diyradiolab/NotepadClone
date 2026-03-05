@@ -1,6 +1,7 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, dialog, nativeTheme, protocol, net, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { execSync } = require('child_process');
 
 // macOS: disable press-and-hold accent picker so keys repeat (essential for code editors)
@@ -1000,6 +1001,26 @@ ipcMain.handle('renderer:dashboard-browser-reload', async (_event, { browserId }
 ipcMain.handle('renderer:dashboard-browser-set-bounds', async (_event, { browserId, bounds }) => {
   const view = dashboardViews.get(browserId);
   if (view) view.setBounds(bounds);
+});
+
+// ── Path Resolution (for terminal file opener) ──
+
+ipcMain.handle('renderer:resolve-path', async (_event, { filePath, cwd }) => {
+  try {
+    let resolved = filePath;
+    if (!path.isAbsolute(resolved)) {
+      resolved = path.resolve(cwd || os.homedir(), resolved);
+    }
+    const stats = await fs.promises.stat(resolved);
+    return { absolutePath: resolved, exists: stats.isFile() };
+  } catch {
+    // Resolve the path even if it doesn't exist (for error messages)
+    let resolved = filePath;
+    if (!path.isAbsolute(resolved)) {
+      resolved = path.resolve(cwd || os.homedir(), resolved);
+    }
+    return { absolutePath: resolved, exists: false };
+  }
 });
 
 // ── Terminal ──

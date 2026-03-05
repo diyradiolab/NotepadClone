@@ -2,6 +2,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
+import { TerminalFileOpener } from './terminal-file-opener';
 
 export class TerminalPanel {
   constructor(container, api) {
@@ -9,6 +10,7 @@ export class TerminalPanel {
     this.api = api;
     this.xterm = null;
     this.fitAddon = null;
+    this.fileOpener = null;
     this.removeDataListener = null;
     this.removeExitListener = null;
     this._exited = false;
@@ -76,6 +78,7 @@ export class TerminalPanel {
   destroy() {
     if (this.removeDataListener) { this.removeDataListener(); this.removeDataListener = null; }
     if (this.removeExitListener) { this.removeExitListener(); this.removeExitListener = null; }
+    if (this.fileOpener) { this.fileOpener.destroy(); this.fileOpener = null; }
     if (this._resizeObserver) { this._resizeObserver.disconnect(); }
     if (this.xterm) { this.xterm.dispose(); this.xterm = null; }
     window.api.terminalKill();
@@ -102,6 +105,11 @@ export class TerminalPanel {
     this.xterm.loadAddon(new WebLinksAddon());
 
     this.xterm.open(body);
+
+    // Initialize file opener (CWD tracking, edit command, Ctrl+click links)
+    const initialCwd = this._getWorkingDirectory();
+    if (this.fileOpener) this.fileOpener.destroy();
+    this.fileOpener = new TerminalFileOpener(this.xterm, this.api, initialCwd);
 
     // Fit after a frame so the container has dimensions
     requestAnimationFrame(() => {

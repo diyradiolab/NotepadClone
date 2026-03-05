@@ -200,6 +200,9 @@ contextBridge.exposeInMainWorld('api', {
   getLastMSSQLConfig: () => ipcRenderer.invoke('renderer:get-last-mssql-config'),
   saveLastMSSQLConfig: (config) => ipcRenderer.invoke('renderer:save-last-mssql-config', config),
 
+  // Path resolution (for terminal file opener)
+  resolvePath: (filePath, cwd) => ipcRenderer.invoke('renderer:resolve-path', { filePath, cwd }),
+
   // Terminal
   terminalCreate: (options) => ipcRenderer.invoke('renderer:terminal-create', options),
   terminalWrite: (data) => ipcRenderer.send('renderer:terminal-write', data),
