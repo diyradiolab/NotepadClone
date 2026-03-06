@@ -1,0 +1,180 @@
+.regex-tester-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text-color, #d4d4d4);
+  background: var(--bg-color, #1e1e1e);
+  overflow: hidden;
+}
+
+.regex-tester-panel .rt-section {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.regex-tester-panel .rt-section-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Regex input row */
+.regex-tester-panel .rt-regex-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.regex-tester-panel .rt-regex-input {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--input-bg, #2d2d2d);
+  color: var(--text-color, #d4d4d4);
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 13px;
+}
+
+.regex-tester-panel .rt-flags {
+  display: flex;
+  gap: 2px;
+}
+
+.regex-tester-panel .rt-flag-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg, #2d2d2d);
+  color: #888;
+  border: 1px solid var(--border-color, #555);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.regex-tester-panel .rt-flag-btn.active {
+  background: #264f78;
+  color: #fff;
+  border-color: #3794ff;
+}
+
+.regex-tester-panel .rt-error {
+  color: #f44336;
+  font-size: 12px;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+/* Test string */
+.regex-tester-panel .rt-test-area {
+  flex: 1;
+  min-height: 120px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #333);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.regex-tester-panel .rt-test-input {
+  flex: 1;
+  width: 100%;
+  padding: 8px;
+  background: var(--input-bg, #2d2d2d);
+  color: var(--text-color, #d4d4d4);
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 13px;
+  resize: none;
+  line-height: 1.5;
+}
+
+/* Highlighted test display */
+.regex-tester-panel .rt-highlight-display {
+  flex: 1;
+  width: 100%;
+  padding: 8px;
+  background: var(--input-bg, #2d2d2d);
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  position: relative;
+}
+
+.regex-tester-panel .rt-highlight-display mark {
+  background: #264f78;
+  color: #fff;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.regex-tester-panel .rt-highlight-display mark:nth-of-type(even) {
+  background: #6b4c9a;
+}
+
+/* Results table */
+.regex-tester-panel .rt-results {
+  min-height: 100px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px 12px;
+}
+
+.regex-tester-panel .rt-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.regex-tester-panel .rt-copy-btn {
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--border-color, #555);
+  border-radius: 3px;
+  color: var(--text-color, #d4d4d4);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.regex-tester-panel .rt-results table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+}
+
+.regex-tester-panel .rt-results th {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-color, #444);
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.regex-tester-panel .rt-results td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.regex-tester-panel .rt-no-matches {
+  color: #888;
+  text-align: center;
+  padding: 16px;
+}

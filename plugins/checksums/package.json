@@ -1,0 +1,15 @@
+{
+  "name": "notepadclone-checksums",
+  "displayName": "Checksums",
+  "description": "Calculate MD5, SHA-1, SHA-256, SHA-512 hashes for the active file",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "checksums.show",
+        "title": "Checksums"
+      }
+    ]
+  }
+}

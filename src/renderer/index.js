@@ -62,6 +62,14 @@ import * as webDashboardPlugin from '../../plugins/web-dashboard/index';
 import webDashboardManifest from '../../plugins/web-dashboard/package.json';
 import * as httpClientPlugin from '../../plugins/http-client/index';
 import httpClientManifest from '../../plugins/http-client/package.json';
+import * as checksumsPlugin from '../../plugins/checksums/index';
+import checksumsManifest from '../../plugins/checksums/package.json';
+import * as regexTesterPlugin from '../../plugins/regex-tester/index';
+import regexTesterManifest from '../../plugins/regex-tester/package.json';
+import * as bookmarksPlugin from '../../plugins/bookmarks/index';
+import bookmarksManifest from '../../plugins/bookmarks/package.json';
+import * as hexEditorPlugin from '../../plugins/hex-editor/index';
+import hexEditorManifest from '../../plugins/hex-editor/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -120,6 +128,10 @@ pluginHost.register(commandPaletteManifest, commandPalettePlugin);
 pluginHost.register(captainsLogManifest, captainsLogPlugin);
 pluginHost.register(webDashboardManifest, webDashboardPlugin);
 pluginHost.register(httpClientManifest, httpClientPlugin);
+pluginHost.register(checksumsManifest, checksumsPlugin);
+pluginHost.register(regexTesterManifest, regexTesterPlugin);
+pluginHost.register(bookmarksManifest, bookmarksPlugin);
+pluginHost.register(hexEditorManifest, hexEditorPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -391,7 +403,9 @@ tabManager.onActivate((tabId) => {
     (tab && tab.isMarkdown && tab.markdownMode === 'read') ||
     (tab && tab.isLargeFile) ||
     (tab && tab.isDashboard) ||
-    (tab && tab.isHttpClient);
+    (tab && tab.isHttpClient) ||
+    (tab && tab.isRegexTester) ||
+    (tab && tab.isHexEditor);
 
   if (isSpecialViewer) {
     deactivatePreviousEditor();
@@ -417,11 +431,13 @@ tabManager.onActivate((tabId) => {
     statusBar.updateLanguage('Git History');
     viewerRegistry.updateToolbars(tab);
   } else if (tab && tab.isDiffTab) {
+    viewerRegistry.deactivateActive();
     editorManager.activateTab(tabId);
     statusBar.updateLanguage('Diff');
     viewerRegistry.updateToolbars(tab);
   } else {
     // Default: Monaco editor
+    viewerRegistry.deactivateActive();
     editorManager.activateTab(tabId);
     const langInfo = editorManager.getLanguageInfo(tabId);
     statusBar.updateLanguage(langInfo.displayName);
@@ -1040,6 +1056,10 @@ window.api.onMenuNewDiagram(() => commandRegistry.execute('diagram.new'));
 window.api.onMenuExportDiagramSvg(() => commandRegistry.execute('diagram.exportSvg'));
 window.api.onMenuNewDashboard(() => commandRegistry.execute('webDashboard.open'));
 window.api.onMenuHttpClient(() => commandRegistry.execute('httpClient.open'));
+window.api.onMenuChecksums(() => commandRegistry.execute('checksums.show'));
+window.api.onMenuRegexTester(() => commandRegistry.execute('regexTester.open'));
+window.api.onMenuBookmarks(() => commandRegistry.execute('bookmarks.toggle'));
+window.api.onMenuHexEditor(() => commandRegistry.execute('hexEditor.open'));
 window.api.onMenuToggleTail(() => toggleTail());
 window.api.onMenuToggleTailFilter(() => toggleTailFilter());
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));

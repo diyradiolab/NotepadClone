@@ -1,0 +1,27 @@
+{
+  "name": "notepadclone-bookmarks",
+  "displayName": "Bookmarks",
+  "description": "Mark lines in the editor and jump between them",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "bookmarks.toggle",
+        "title": "Toggle Bookmark"
+      },
+      {
+        "id": "bookmarks.nextBookmark",
+        "title": "Next Bookmark"
+      },
+      {
+        "id": "bookmarks.prevBookmark",
+        "title": "Previous Bookmark"
+      },
+      {
+        "id": "bookmarks.showAll",
+        "title": "Show All Bookmarks"
+      }
+    ]
+  }
+}

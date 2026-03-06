@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 // macOS: disable press-and-hold accent picker so keys repeat (essential for code editors)
 if (process.platform === 'darwin') {
@@ -1021,6 +1022,25 @@ ipcMain.handle('renderer:resolve-path', async (_event, { filePath, cwd }) => {
     }
     return { absolutePath: resolved, exists: false };
   }
+});
+
+// ── Checksums ──
+
+ipcMain.handle('renderer:calculate-checksums', async (_event, filePath) => {
+  const algos = ['md5', 'sha1', 'sha256', 'sha512'];
+  const results = {};
+  const fileBuffer = await fs.promises.readFile(filePath);
+  for (const algo of algos) {
+    results[algo] = crypto.createHash(algo).update(fileBuffer).digest('hex');
+  }
+  return results;
+});
+
+// ── Binary File Read (for Hex Editor) ──
+
+ipcMain.handle('renderer:read-file-binary', async (_event, filePath) => {
+  const buffer = await fs.promises.readFile(filePath);
+  return buffer.toString('base64');
 });
 
 // ── Terminal ──

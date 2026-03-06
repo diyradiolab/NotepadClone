@@ -203,6 +203,20 @@ contextBridge.exposeInMainWorld('api', {
   // Path resolution (for terminal file opener)
   resolvePath: (filePath, cwd) => ipcRenderer.invoke('renderer:resolve-path', { filePath, cwd }),
 
+  // Checksums
+  calculateChecksums: (filePath) => ipcRenderer.invoke('renderer:calculate-checksums', filePath),
+  onMenuChecksums: (callback) => ipcRenderer.on('main:checksums', callback),
+
+  // Hex Editor (binary read)
+  readFileBinary: (filePath) => ipcRenderer.invoke('renderer:read-file-binary', filePath),
+  onMenuHexEditor: (callback) => ipcRenderer.on('main:hex-editor', callback),
+
+  // Regex Tester
+  onMenuRegexTester: (callback) => ipcRenderer.on('main:regex-tester', callback),
+
+  // Bookmarks
+  onMenuBookmarks: (callback) => ipcRenderer.on('main:bookmarks', callback),
+
   // Terminal
   terminalCreate: (options) => ipcRenderer.invoke('renderer:terminal-create', options),
   terminalWrite: (data) => ipcRenderer.send('renderer:terminal-write', data),

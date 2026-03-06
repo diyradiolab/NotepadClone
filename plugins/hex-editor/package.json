@@ -1,0 +1,15 @@
+{
+  "name": "notepadclone-hex-editor",
+  "displayName": "Hex Editor",
+  "description": "View files in hexadecimal with offset, hex, and ASCII columns",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "hexEditor.open",
+        "title": "Hex Editor"
+      }
+    ]
+  }
+}

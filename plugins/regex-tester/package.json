@@ -1,0 +1,15 @@
+{
+  "name": "notepadclone-regex-tester",
+  "displayName": "Regex Tester",
+  "description": "Build and test regular expressions with live match highlighting",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "regexTester.open",
+        "title": "Regex Tester"
+      }
+    ]
+  }
+}

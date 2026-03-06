@@ -236,6 +236,26 @@ function buildMenu(mainWindow, store, currentFilePath) {
           accelerator: 'CmdOrCtrl+Alt+H',
           click: () => mainWindow.webContents.send('main:http-client'),
         },
+        { type: 'separator' },
+        {
+          label: 'Regex Tester',
+          accelerator: 'CmdOrCtrl+Alt+R',
+          click: () => mainWindow.webContents.send('main:regex-tester'),
+        },
+        {
+          label: 'Bookmarks',
+          accelerator: 'CmdOrCtrl+Alt+B',
+          click: () => mainWindow.webContents.send('main:bookmarks'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Hex Editor',
+          click: () => mainWindow.webContents.send('main:hex-editor'),
+        },
+        {
+          label: 'Checksums',
+          click: () => mainWindow.webContents.send('main:checksums'),
+        },
       ],
     },
 
