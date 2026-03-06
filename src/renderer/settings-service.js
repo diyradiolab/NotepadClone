@@ -39,6 +39,12 @@ const SCHEMA = {
       largeFileThreshold: { type: 'number', default: 5, min: 1, max: 100, label: 'Large File Threshold (MB)' },
     },
   },
+  session: {
+    label: 'Session',
+    settings: {
+      restoreOnStartup: { type: 'boolean', default: true, label: 'Restore previous session on startup' },
+    },
+  },
   tail: {
     label: 'Tail',
     settings: {

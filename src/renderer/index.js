@@ -1138,6 +1138,9 @@ commandRegistry.setupKeyboardShortcuts();
 // ── Window Close Flow ──
 
 window.api.onGetDirtyTabs(() => {
+  // Save session before responding with dirty tabs
+  saveCurrentSession();
+
   const dirtyTabs = [];
   for (const [tabId, tab] of tabManager.getAllTabs()) {
     if (tab.dirty) {
@@ -1152,5 +1155,44 @@ window.api.onSaveTab(async (tabId) => {
   window.api.sendSaveTabResponse(saved);
 });
 
-// ── Start with one blank tab ──
-newFile();
+// ── Session Save / Restore ──
+
+function saveCurrentSession() {
+  const tabs = [];
+  let activeIndex = 0;
+  const activeTabId = tabManager.getActiveTabId();
+  let i = 0;
+  for (const [tabId, tab] of tabManager.getAllTabs()) {
+    if (tab.filePath) {
+      if (tabId === activeTabId) activeIndex = tabs.length;
+      tabs.push({ filePath: tab.filePath, encoding: tab.encoding || 'UTF-8' });
+    }
+    i++;
+  }
+  window.api.saveSession({ tabs, activeIndex });
+}
+
+(async () => {
+  const session = await window.api.getSession();
+  if (session && session.tabs && session.tabs.length > 0 && settingsService.get('session.restoreOnStartup')) {
+    let restoredCount = 0;
+    let activeFilePath = null;
+    if (session.activeIndex >= 0 && session.activeIndex < session.tabs.length) {
+      activeFilePath = session.tabs[session.activeIndex].filePath;
+    }
+    for (const tab of session.tabs) {
+      await openFileByPath(tab.filePath);
+      const openedTab = tabManager.findTabByPath(tab.filePath);
+      if (openedTab) restoredCount++;
+    }
+    // Activate the tab that was last focused
+    if (activeFilePath && restoredCount > 0) {
+      const activeTabId = tabManager.findTabByPath(activeFilePath);
+      if (activeTabId) tabManager.activate(activeTabId);
+    }
+    // Fall back to blank tab if nothing restored
+    if (restoredCount === 0) newFile();
+  } else {
+    newFile();
+  }
+})();

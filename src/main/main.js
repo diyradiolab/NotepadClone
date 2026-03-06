@@ -55,6 +55,9 @@ const OPTIONS_DEFAULTS = {
     autoSaveDelay: 1000,
     largeFileThreshold: 5,
   },
+  session: {
+    restoreOnStartup: true,
+  },
   tail: {
     maxLines: 100000,
   },
@@ -69,6 +72,7 @@ const store = new Store({
     snippets: [],
     dashboardLinks: [],
     httpClientCollections: { collections: [], version: 1 },
+    session: { tabs: [], activeIndex: 0 },
     options: OPTIONS_DEFAULTS,
   },
 });
@@ -535,6 +539,17 @@ ipcMain.handle('renderer:set-theme', async (_event, theme) => {
   }
   buildMenu(mainWindow, store, currentFilePath);
   return { success: true };
+});
+
+// ── Session Restore ──
+
+ipcMain.handle('renderer:save-session', async (_event, data) => {
+  store.set('session', data);
+  return { success: true };
+});
+
+ipcMain.handle('renderer:get-session', async () => {
+  return store.get('session', { tabs: [], activeIndex: 0 });
 });
 
 // ── Options ──

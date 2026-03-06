@@ -241,6 +241,10 @@ contextBridge.exposeInMainWorld('api', {
   // Plugin Manager
   onMenuPluginManager: (callback) => ipcRenderer.on('main:plugin-manager', callback),
 
+  // Session restore
+  saveSession: (data) => ipcRenderer.invoke('renderer:save-session', data),
+  getSession: () => ipcRenderer.invoke('renderer:get-session'),
+
   // Options
   getOptions: () => ipcRenderer.invoke('renderer:get-options'),
   setOption: (key, value) => ipcRenderer.invoke('renderer:set-option', { key, value }),
