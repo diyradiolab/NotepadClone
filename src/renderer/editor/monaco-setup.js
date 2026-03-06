@@ -91,7 +91,7 @@ const DEFAULT_OPTIONS = {
   smoothScrolling: true,
   mouseWheelZoom: true,
   folding: true,
-  glyphMargin: false,
+  glyphMargin: true,
   renderLineHighlight: 'all',
   columnSelection: false,
   find: { addExtraSpaceOnTop: false },
