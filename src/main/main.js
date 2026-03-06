@@ -546,6 +546,9 @@ ipcMain.handle('renderer:get-options', async () => {
 ipcMain.handle('renderer:set-option', async (_event, { key, value }) => {
   store.set(`options.${key}`, value);
   // Keep top-level theme in sync with options.appearance.theme
+  if (key === 'appearance.showMenuHelp') {
+    buildMenu(mainWindow, store, currentFilePath);
+  }
   if (key === 'appearance.theme') {
     store.set('theme', value);
     if (mainWindow) {

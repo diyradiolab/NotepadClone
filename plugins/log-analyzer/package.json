@@ -1,0 +1,19 @@
+{
+  "name": "notepadclone-log-analyzer",
+  "displayName": "Log Analyzer",
+  "description": "Parse, filter, and analyze log files with format detection and level-based color coding",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "logAnalyzer.open",
+        "title": "Log Analyzer"
+      },
+      {
+        "id": "logAnalyzer.toggleMode",
+        "title": "Toggle Log Analyzer Mode"
+      }
+    ]
+  }
+}

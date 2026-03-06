@@ -210,6 +210,7 @@ contextBridge.exposeInMainWorld('api', {
   // Hex Editor (binary read)
   readFileBinary: (filePath) => ipcRenderer.invoke('renderer:read-file-binary', filePath),
   onMenuHexEditor: (callback) => ipcRenderer.on('main:hex-editor', callback),
+  onMenuLogAnalyzer: (callback) => ipcRenderer.on('main:log-analyzer', callback),
 
   // Regex Tester
   onMenuRegexTester: (callback) => ipcRenderer.on('main:regex-tester', callback),
@@ -251,4 +252,7 @@ contextBridge.exposeInMainWorld('api', {
   onMenuHelpPluginUser: (callback) => ipcRenderer.on('main:help-plugin-user', callback),
   onMenuHelpSqlQuery: (callback) => ipcRenderer.on('main:help-sql-query', callback),
   onMenuHelpMigration: (callback) => ipcRenderer.on('main:help-migration', callback),
+
+  // Feature Guide
+  onMenuFeatureGuide: (callback) => ipcRenderer.on('main:feature-guide', callback),
 });

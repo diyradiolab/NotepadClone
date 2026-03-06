@@ -1,6 +1,7 @@
 import './styles/main.css';
 import './styles/notepadpp-theme.css';
 import './styles/tail-filter-panel.css';
+import './styles/feature-guide-dialog.css';
 import { EditorManager } from './editor/editor-manager';
 import { TabManager } from './components/tab-manager';
 import { StatusBar } from './components/status-bar';
@@ -70,11 +71,14 @@ import * as bookmarksPlugin from '../../plugins/bookmarks/index';
 import bookmarksManifest from '../../plugins/bookmarks/package.json';
 import * as hexEditorPlugin from '../../plugins/hex-editor/index';
 import hexEditorManifest from '../../plugins/hex-editor/package.json';
+import * as logAnalyzerPlugin from '../../plugins/log-analyzer/index';
+import logAnalyzerManifest from '../../plugins/log-analyzer/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
 import { PLUGIN_USER_GUIDE } from './help/plugin-user-guide';
 import { MIGRATION_GUIDE } from './help/migration-guide';
+import { FeatureGuideDialog } from './components/feature-guide-dialog';
 
 // ── Initialize Core Components ──
 const editorContainer = document.getElementById('editor-container');
@@ -132,6 +136,7 @@ pluginHost.register(checksumsManifest, checksumsPlugin);
 pluginHost.register(regexTesterManifest, regexTesterPlugin);
 pluginHost.register(bookmarksManifest, bookmarksPlugin);
 pluginHost.register(hexEditorManifest, hexEditorPlugin);
+pluginHost.register(logAnalyzerManifest, logAnalyzerPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -405,7 +410,8 @@ tabManager.onActivate((tabId) => {
     (tab && tab.isDashboard) ||
     (tab && tab.isHttpClient) ||
     (tab && tab.isRegexTester) ||
-    (tab && tab.isHexEditor);
+    (tab && tab.isHexEditor) ||
+    (tab && tab.isLogFile && tab.logMode === 'analyze');
 
   if (isSpecialViewer) {
     deactivatePreviousEditor();
@@ -594,6 +600,41 @@ function isTableXML(content) {
   } catch { return false; }
 }
 
+function isLogFile(filename) {
+  if (!filename) return false;
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.log') || lower.endsWith('.jsonl') || lower.endsWith('.ndjson');
+}
+
+function isLogContent(content) {
+  if (!content || content.length < 10) return false;
+  const lines = content.split('\n').slice(0, 20).filter(l => l.trim());
+  if (lines.length < 3) return false;
+  // JSONL check: lines are JSON objects with log-like keys
+  let jsonCount = 0;
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (typeof obj === 'object' && obj !== null &&
+          (obj.level || obj.severity || obj.msg || obj.message || obj.timestamp || obj.time)) {
+        jsonCount++;
+      }
+    } catch { /* not JSON */ }
+  }
+  if (jsonCount >= lines.length * 0.8) return true;
+  // Timestamped log lines with levels
+  const tsLevelRe = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^ ]*\s+(?:\[?)(?:ERROR|WARN|INFO|DEBUG|FATAL|CRITICAL|TRACE|WARNING|ERR|NOTICE)\b/i;
+  const matches = lines.filter(l => tsLevelRe.test(l)).length;
+  if (matches >= lines.length * 0.5) return true;
+  // Syslog
+  const syslogRe = /^(?:<\d+>)?[A-Z][a-z]{2}\s+\d+\s+\d+:\d+:\d+/;
+  if (lines.filter(l => syslogRe.test(l)).length >= lines.length * 0.5) return true;
+  // Apache/nginx
+  const apacheRe = /^[\d.]+\s+-\s+-?\s*\[/;
+  if (lines.filter(l => apacheRe.test(l)).length >= lines.length * 0.5) return true;
+  return false;
+}
+
 function isDiagramFile(filename) {
   if (!filename) return false;
   const lower = filename.toLowerCase();
@@ -636,6 +677,12 @@ function createTabForFile(file) {
     }
   }
 
+  // Detect log files — by extension or content sniffing
+  if (isLogFile(filename) || isLogContent(file.content)) {
+    tab.isLogFile = true;
+    tab.logMode = 'analyze';
+  }
+
   // Detect diagram files
   if (isDiagramFile(filename)) {
     tab.isDiagram = true;
@@ -652,7 +699,7 @@ function createTabForFile(file) {
 
   statusBar.updateLineEnding(file.lineEnding || 'LF');
   statusBar.updateEncoding(file.encoding || 'UTF-8');
-  if (!tab.isMarkdown && !tab.isTableFile && !(tab.isTreeFile && tab.treeMode === 'tree') && !tab.isDiagram) {
+  if (!tab.isMarkdown && !tab.isTableFile && !(tab.isTreeFile && tab.treeMode === 'tree') && !tab.isDiagram && !(tab.isLogFile && tab.logMode === 'analyze')) {
     statusBar.updateLanguage(langInfo.displayName);
   }
 
@@ -1002,6 +1049,7 @@ document.getElementById('toolbar').addEventListener('click', (e) => {
     case 'new-diagram': commandRegistry.execute('diagram.new'); break;
     case 'new-dashboard': commandRegistry.execute('webDashboard.open'); break;
     case 'diagram-toggle': commandRegistry.execute('diagram.toggleSplit'); break;
+    case 'log-analyzer-toggle': commandRegistry.execute('logAnalyzer.toggleMode'); break;
     case 'diagram-export': commandRegistry.execute('diagram.exportSvg'); break;
   }
 });
@@ -1060,6 +1108,7 @@ window.api.onMenuChecksums(() => commandRegistry.execute('checksums.show'));
 window.api.onMenuRegexTester(() => commandRegistry.execute('regexTester.open'));
 window.api.onMenuBookmarks(() => commandRegistry.execute('bookmarks.toggle'));
 window.api.onMenuHexEditor(() => commandRegistry.execute('hexEditor.open'));
+window.api.onMenuLogAnalyzer(() => commandRegistry.execute('logAnalyzer.open'));
 window.api.onMenuToggleTail(() => toggleTail());
 window.api.onMenuToggleTailFilter(() => toggleTailFilter());
 window.api.onMenuToggleTreeView(() => commandRegistry.execute('tree.toggleMode'));
@@ -1072,6 +1121,11 @@ window.api.onMenuHelpPluginDev(() => eventBus.emit('help:open', { title: 'Plugin
 window.api.onMenuHelpPluginUser(() => eventBus.emit('help:open', { title: 'Using Plugins.md', content: PLUGIN_USER_GUIDE }));
 window.api.onMenuHelpSqlQuery(() => commandRegistry.execute('sqlQuery.help'));
 window.api.onMenuHelpMigration(() => eventBus.emit('help:open', { title: 'Moving to a New Computer.md', content: MIGRATION_GUIDE }));
+
+// Feature Guide
+const featureGuideDialog = new FeatureGuideDialog();
+window.api.onMenuFeatureGuide(() => featureGuideDialog.show());
+commandRegistry.register('featureGuide.show', () => featureGuideDialog.show(), { name: 'Feature Guide', shortcut: 'F1' });
 
 // Text transforms (via core-editing plugin)
 window.api.onTextTransform((type) => {

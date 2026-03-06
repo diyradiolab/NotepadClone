@@ -26,6 +26,7 @@ const SCHEMA = {
     label: 'Appearance',
     settings: {
       theme: { type: 'select', default: 'system', options: ['system', 'light', 'dark'], label: 'Theme' },
+      showMenuHelp: { type: 'boolean', default: false, label: 'Show help descriptions in menus' },
     },
   },
   files: {
