@@ -321,17 +321,10 @@ window.api = {
   // ── Web Dashboard (unsupported) ──
   getDashboardLinks: async () => lsGet('npc-dashboard-links', []),
   saveDashboardLinks: async (links) => { lsSet('npc-dashboard-links', links); },
+  launchApp: unsupported('App launch'),
+  browseForApp: unsupported('App browse'),
+  openExternalUrl: (url) => { if (url) window.open(url, '_blank'); },
   onMenuNewDashboard: noop,
-  dashboardBrowserCreate: unsupported('Web dashboard browser'),
-  dashboardBrowserDestroy: unsupported('Web dashboard browser'),
-  dashboardBrowserNavigate: unsupported('Web dashboard browser'),
-  dashboardBrowserBack: unsupported('Web dashboard browser'),
-  dashboardBrowserForward: unsupported('Web dashboard browser'),
-  dashboardBrowserReload: unsupported('Web dashboard browser'),
-  dashboardBrowserSetBounds: unsupported('Web dashboard browser'),
-  onDashboardBrowserNavigated: noop,
-  onDashboardBrowserTitle: noop,
-  onDashboardBrowserLoadFailed: noop,
 
   // ── Database Export (unsupported) ──
   pickSQLiteFile: unsupported('SQLite'),
