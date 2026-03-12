@@ -7,6 +7,17 @@ export function activate(api) {
   const panels = new Map(); // tabId → WhiteboardPanel
   let lastActiveTabId = null;
 
+  function exportSvg() {
+    if (!lastActiveTabId || !panels.has(lastActiveTabId)) return;
+    const panel = panels.get(lastActiveTabId);
+    const svg = panel.exportSvg();
+    if (svg && window.api.exportSvgFile) {
+      const tab = api.tabs.getTab(lastActiveTabId);
+      const defaultName = (tab?.title || 'whiteboard').replace(/\.whiteboard$/, '') + '.svg';
+      window.api.exportSvgFile(svg, defaultName);
+    }
+  }
+
   function getOrCreatePanel(tabId) {
     if (!panels.has(tabId)) {
       const editorWrapper = api.editor.container.parentElement;
@@ -21,6 +32,14 @@ export function activate(api) {
           entry.model.setValue(json);
         }
       });
+
+      // Zoom change → status bar
+      panel.onZoomChange((pct) => {
+        api.statusBar.updateLanguage(`Whiteboard (${pct}%)`);
+      });
+
+      // SVG export from toolbar button
+      panel.onExportSvg(() => exportSvg());
 
       editorWrapper.appendChild(panel.getElement());
       panels.set(tabId, panel);
@@ -64,7 +83,8 @@ export function activate(api) {
         else p.hide();
       }
 
-      api.statusBar.updateLanguage('Whiteboard');
+      const zoom = panel.getZoom();
+      api.statusBar.updateLanguage(`Whiteboard (${zoom}%)`);
     },
 
     deactivate() {
@@ -122,16 +142,7 @@ export function activate(api) {
   api.registerCommand({
     id: 'whiteboard.exportSvg',
     title: 'Export Whiteboard as SVG',
-    handler: async () => {
-      if (!lastActiveTabId || !panels.has(lastActiveTabId)) return;
-      const panel = panels.get(lastActiveTabId);
-      const svg = panel.exportSvg();
-      if (svg && window.api.exportSvgFile) {
-        const tab = api.tabs.getTab(lastActiveTabId);
-        const defaultName = (tab?.title || 'whiteboard').replace(/\.whiteboard$/, '') + '.svg';
-        await window.api.exportSvgFile(svg, defaultName);
-      }
-    },
+    handler: () => exportSvg(),
   });
 
   // ── Listen for "New Whiteboard" from main menu ──

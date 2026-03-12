@@ -28,9 +28,13 @@ export class WhiteboardPanel {
     this._isUndoRedo = false;
     this._syncTimer = null;
     this._syncCallback = null;
+    this._onZoomChange = null;
     this._shapeStart = null;
     this._tempShape = null;
     this._resizeObserver = null;
+    this._isPanning = false;
+    this._spaceHeld = false;
+    this._panStart = null;
 
     this._buildDOM();
     this._initCanvas();
@@ -136,6 +140,49 @@ export class WhiteboardPanel {
     widthLabel.appendChild(document.createTextNode(' Width'));
     this._toolbar.appendChild(widthLabel);
 
+    // Separator
+    this._toolbar.appendChild(this._makeSep());
+
+    // Zoom controls
+    const zoomGroup = document.createElement('div');
+    zoomGroup.className = 'wb-tool-group';
+
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.className = 'wb-tool-btn';
+    zoomOutBtn.title = 'Zoom Out (Ctrl+-)';
+    zoomOutBtn.textContent = '−';
+    zoomOutBtn.addEventListener('click', () => this._zoomBy(-0.1));
+    zoomGroup.appendChild(zoomOutBtn);
+
+    this._zoomLabel = document.createElement('span');
+    this._zoomLabel.className = 'wb-zoom-label';
+    this._zoomLabel.textContent = '100%';
+    this._zoomLabel.title = 'Click to reset zoom';
+    this._zoomLabel.addEventListener('click', () => this._zoomTo(1));
+    zoomGroup.appendChild(this._zoomLabel);
+
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.className = 'wb-tool-btn';
+    zoomInBtn.title = 'Zoom In (Ctrl+=)';
+    zoomInBtn.textContent = '+';
+    zoomInBtn.addEventListener('click', () => this._zoomBy(0.1));
+    zoomGroup.appendChild(zoomInBtn);
+
+    this._toolbar.appendChild(zoomGroup);
+
+    // Separator
+    this._toolbar.appendChild(this._makeSep());
+
+    // SVG Export button
+    this._exportSvgBtn = document.createElement('button');
+    this._exportSvgBtn.className = 'wb-tool-btn';
+    this._exportSvgBtn.title = 'Export as SVG';
+    this._exportSvgBtn.textContent = '⎙';
+    this._exportSvgBtn.addEventListener('click', () => {
+      if (this._onExportSvg) this._onExportSvg();
+    });
+    this._toolbar.appendChild(this._exportSvgBtn);
+
     this._wrapper.appendChild(this._toolbar);
 
     // Canvas container
@@ -191,8 +238,42 @@ export class WhiteboardPanel {
       zoom *= 0.999 ** delta;
       zoom = Math.min(Math.max(zoom, 0.1), 5);
       this._canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+      this._updateZoomLabel();
       opt.e.preventDefault();
       opt.e.stopPropagation();
+    });
+
+    // Pan with middle mouse button
+    this._canvas.on('mouse:down', (opt) => {
+      if (opt.e.button === 1 || this._spaceHeld) {
+        this._isPanning = true;
+        this._panStart = { x: opt.e.clientX, y: opt.e.clientY };
+        this._canvas.defaultCursor = 'grabbing';
+        this._canvas.selection = false;
+        opt.e.preventDefault();
+      }
+    });
+
+    this._canvas.on('mouse:move', (opt) => {
+      if (this._isPanning && this._panStart) {
+        const dx = opt.e.clientX - this._panStart.x;
+        const dy = opt.e.clientY - this._panStart.y;
+        this._canvas.relativePan({ x: dx, y: dy });
+        this._panStart = { x: opt.e.clientX, y: opt.e.clientY };
+        opt.e.preventDefault();
+      }
+    });
+
+    this._canvas.on('mouse:up', (opt) => {
+      if (this._isPanning) {
+        this._isPanning = false;
+        this._panStart = null;
+        // Restore cursor based on active tool
+        if (!this._spaceHeld) {
+          this._canvas.defaultCursor = this._activeTool === 'select' ? 'default' : 'crosshair';
+          if (this._activeTool === 'select') this._canvas.selection = true;
+        }
+      }
     });
 
     this._setTool('select');
@@ -217,6 +298,16 @@ export class WhiteboardPanel {
 
   _setupKeyboard() {
     this._wrapper.addEventListener('keydown', (e) => {
+      // Space for pan mode
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._spaceHeld = true;
+        this._canvas.defaultCursor = 'grab';
+        this._canvas.selection = false;
+        return;
+      }
+
       // Tool shortcuts (single key, no modifier)
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         const tool = TOOLS.find(t => t.key === e.key.toLowerCase());
@@ -229,6 +320,27 @@ export class WhiteboardPanel {
       }
 
       const isMod = e.ctrlKey || e.metaKey;
+
+      // Ctrl+= / Ctrl+- for zoom
+      if (isMod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._zoomBy(0.1);
+        return;
+      }
+      if (isMod && e.key === '-') {
+        e.preventDefault();
+        e.stopPropagation();
+        this._zoomBy(-0.1);
+        return;
+      }
+      // Ctrl+0 to reset zoom
+      if (isMod && e.key === '0') {
+        e.preventDefault();
+        e.stopPropagation();
+        this._zoomTo(1);
+        return;
+      }
 
       // Delete selected
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -296,6 +408,40 @@ export class WhiteboardPanel {
         return;
       }
     });
+
+    this._wrapper.addEventListener('keyup', (e) => {
+      if (e.key === ' ') {
+        this._spaceHeld = false;
+        if (!this._isPanning) {
+          this._canvas.defaultCursor = this._activeTool === 'select' ? 'default' : 'crosshair';
+          if (this._activeTool === 'select') this._canvas.selection = true;
+        }
+      }
+    });
+  }
+
+  // ── Zoom Helpers ──
+
+  _zoomBy(delta) {
+    let zoom = this._canvas.getZoom() + delta;
+    zoom = Math.min(Math.max(zoom, 0.1), 5);
+    const center = this._canvas.getCenter();
+    this._canvas.zoomToPoint({ x: center.left, y: center.top }, zoom);
+    this._updateZoomLabel();
+  }
+
+  _zoomTo(level) {
+    const center = this._canvas.getCenter();
+    this._canvas.zoomToPoint({ x: center.left, y: center.top }, level);
+    // Reset pan to origin
+    this._canvas.setViewportTransform([level, 0, 0, level, 0, 0]);
+    this._updateZoomLabel();
+  }
+
+  _updateZoomLabel() {
+    const pct = Math.round(this._canvas.getZoom() * 100);
+    if (this._zoomLabel) this._zoomLabel.textContent = `${pct}%`;
+    if (this._onZoomChange) this._onZoomChange(pct);
   }
 
   // ── Tool Switching ──
@@ -525,14 +671,35 @@ export class WhiteboardPanel {
     if (!this._canvas || !json) return;
     try {
       const data = typeof json === 'string' ? JSON.parse(json) : json;
-      if (!data || !data.objects) return;
+      if (!data || typeof data !== 'object') {
+        this._showError('Invalid whiteboard file: not a JSON object');
+        return;
+      }
+      if (!data.objects) {
+        this._showError('Invalid whiteboard file: missing objects array');
+        return;
+      }
       await this._canvas.loadFromJSON(data);
       this._canvas.renderAll();
       this._undoStack = [JSON.stringify(this._canvas.toJSON())];
       this._redoStack = [];
     } catch (err) {
       console.error('WhiteboardPanel: Failed to load JSON', err);
+      this._showError(`Failed to load whiteboard: ${err.message}`);
     }
+  }
+
+  _showError(message) {
+    // Show inline error overlay on the canvas
+    let overlay = this._wrapper.querySelector('.wb-error');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'wb-error';
+      this._canvasContainer.appendChild(overlay);
+    }
+    overlay.textContent = message;
+    overlay.style.display = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 5000);
   }
 
   flushSync() {
@@ -545,6 +712,14 @@ export class WhiteboardPanel {
 
   onSync(callback) {
     this._syncCallback = callback;
+  }
+
+  onZoomChange(callback) {
+    this._onZoomChange = callback;
+  }
+
+  onExportSvg(callback) {
+    this._onExportSvg = callback;
   }
 
   // ── Lifecycle ──
@@ -578,6 +753,10 @@ export class WhiteboardPanel {
       this._canvas.backgroundColor = isDark ? DARK_BG : LIGHT_BG;
       this._canvas.renderAll();
     }
+  }
+
+  getZoom() {
+    return this._canvas ? Math.round(this._canvas.getZoom() * 100) : 100;
   }
 
   exportSvg() {
