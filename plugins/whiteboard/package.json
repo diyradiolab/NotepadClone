@@ -1,0 +1,14 @@
+{
+  "name": "notepadclone-whiteboard",
+  "displayName": "Whiteboard Canvas",
+  "description": "Interactive whiteboard with freehand drawing, shapes, and text",
+  "version": "1.0.0",
+  "activationEvents": ["onStartup"],
+  "contributes": {
+    "viewers": ["whiteboard-view"],
+    "commands": [
+      { "id": "whiteboard.new", "title": "New Whiteboard" },
+      { "id": "whiteboard.exportSvg", "title": "Export Whiteboard as SVG" }
+    ]
+  }
+}

@@ -73,6 +73,8 @@ import * as hexEditorPlugin from '../../plugins/hex-editor/index';
 import hexEditorManifest from '../../plugins/hex-editor/package.json';
 import * as logAnalyzerPlugin from '../../plugins/log-analyzer/index';
 import logAnalyzerManifest from '../../plugins/log-analyzer/package.json';
+import * as whiteboardPlugin from '../../plugins/whiteboard/index';
+import whiteboardManifest from '../../plugins/whiteboard/package.json';
 
 // Help documents
 import { PLUGIN_DEVELOPMENT_GUIDE } from './help/plugin-development-guide';
@@ -137,6 +139,7 @@ pluginHost.register(regexTesterManifest, regexTesterPlugin);
 pluginHost.register(bookmarksManifest, bookmarksPlugin);
 pluginHost.register(hexEditorManifest, hexEditorPlugin);
 pluginHost.register(logAnalyzerManifest, logAnalyzerPlugin);
+pluginHost.register(whiteboardManifest, whiteboardPlugin);
 
 // ── Apply Editor Settings from SettingsService to Monaco ──
 function applyEditorSettings() {
@@ -411,7 +414,8 @@ tabManager.onActivate((tabId) => {
     (tab && tab.isHttpClient) ||
     (tab && tab.isRegexTester) ||
     (tab && tab.isHexEditor) ||
-    (tab && tab.isLogFile && tab.logMode === 'analyze');
+    (tab && tab.isLogFile && tab.logMode === 'analyze') ||
+    (tab && tab.isWhiteboard);
 
   if (isSpecialViewer) {
     deactivatePreviousEditor();
@@ -647,6 +651,11 @@ function isTreeFile(filename) {
   return lower.endsWith('.json') || lower.endsWith('.xml');
 }
 
+function isWhiteboardFile(filename) {
+  if (!filename) return false;
+  return filename.toLowerCase().endsWith('.whiteboard');
+}
+
 // ── Create a tab for a file object ──
 
 function createTabForFile(file) {
@@ -693,6 +702,12 @@ function createTabForFile(file) {
   if (isTreeFile(filename)) {
     tab.isTreeFile = true;
     tab.treeMode = tab.isTableFile ? 'edit' : 'tree';
+  }
+
+  // Detect whiteboard files
+  if (isWhiteboardFile(filename)) {
+    tab.isWhiteboard = true;
+    tab.viewerMode = 'whiteboard-view';
   }
 
   tabManager.activate(tabId);
@@ -804,6 +819,8 @@ async function saveFile() {
   const tab = tabManager.getTab(tabId);
   if (tab.isLargeFile) return;
 
+  // Let viewers flush their state to the model before reading content
+  eventBus.emit('file:beforeSave', tabId);
   const content = editorManager.getContent(tabId);
 
   if (tab.filePath) {
@@ -831,6 +848,7 @@ async function saveFileAs() {
   const tab = tabManager.getTab(tabId);
   if (tab.isLargeFile) return false;
 
+  eventBus.emit('file:beforeSave', tabId);
   const content = editorManager.getContent(tabId);
   let result;
   try {

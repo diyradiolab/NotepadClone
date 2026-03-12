@@ -55,6 +55,11 @@ function buildMenu(mainWindow, store, currentFilePath) {
           click: () => mainWindow.webContents.send('main:new-diagram'),
         },
         {
+          label: 'New &Whiteboard',
+          sublabel: sl('New &Whiteboard'),
+          click: () => mainWindow.webContents.send('main:new-whiteboard'),
+        },
+        {
           label: 'New Dashboard',
           sublabel: sl('New Dashboard'),
           click: () => mainWindow.webContents.send('main:new-dashboard'),

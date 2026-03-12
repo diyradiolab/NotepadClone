@@ -175,6 +175,7 @@ contextBridge.exposeInMainWorld('api', {
   browseForApp: () => ipcRenderer.invoke('renderer:browse-for-app'),
   openExternalUrl: (url) => ipcRenderer.invoke('renderer:open-external-url', { url }),
   onMenuNewDashboard: (callback) => ipcRenderer.on('main:new-dashboard', callback),
+  onMenuNewWhiteboard: (callback) => ipcRenderer.on('main:new-whiteboard', callback),
 
   // HTTP Client
   httpClientGetCollections: () => ipcRenderer.invoke('renderer:http-client-get-collections'),

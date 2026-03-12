@@ -1,0 +1,121 @@
+/* ── Whiteboard Canvas Plugin ── */
+
+.wb-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.wb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  min-height: 32px;
+}
+
+.wb-tool-group {
+  display: flex;
+  gap: 2px;
+}
+
+.wb-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wb-tool-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+}
+
+.wb-tool-btn.active {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+
+.wb-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-primary);
+  margin: 0 4px;
+}
+
+.wb-color-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.wb-color-input {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.wb-color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.wb-color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.wb-width-input {
+  width: 60px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--accent-color);
+}
+
+.wb-no-fill {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.wb-no-fill.active {
+  opacity: 1;
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+}
+
+.wb-canvas-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.wb-canvas-container canvas {
+  display: block;
+}
+
+/* Fabric.js upper canvas (interaction layer) */
+.wb-canvas-container .canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+}
