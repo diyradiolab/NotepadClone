@@ -347,6 +347,26 @@ html, body {
   background: var(--scrollbar-thumb-hover);
 }
 
+/* Reset scrollbar overrides inside Monaco — it manages its own scrollbars/minimap */
+.monaco-editor ::-webkit-scrollbar {
+  width: initial;
+  height: initial;
+}
+
+.monaco-editor ::-webkit-scrollbar-track {
+  background: initial;
+}
+
+.monaco-editor ::-webkit-scrollbar-thumb {
+  background: initial;
+  border-radius: initial;
+  border: initial;
+}
+
+.monaco-editor ::-webkit-scrollbar-thumb:hover {
+  background: initial;
+}
+
 /* ── Tab Drag & Drop ── */
 .tab.dragging {
   opacity: 0.5;
